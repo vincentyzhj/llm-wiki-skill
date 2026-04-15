@@ -1,4 +1,4 @@
-# LLM Wiki — Multimodal Knowledge Graph Skill
+# LLM Wiki Skill — Multimodal Knowledge Graph Skill
 
 > *"LLM writes and maintains the wiki; humans read and ask questions."*
 
@@ -11,11 +11,11 @@
 
 ## What is this?
 
-`llm-wiki` is a Skill running inside Claude Code that ingests raw documents of any format (PDF, DOCX, PPTX, XLSX, Markdown, images) into a structured Wiki and automatically builds an interactive knowledge graph (`graph.html`).
+`llm-wiki-skill` is a Skill running inside Claude Code that ingests raw documents of any format (PDF, DOCX, PPTX, XLSX, Markdown, images) into a structured Wiki and automatically builds an interactive knowledge graph (`graph.html`).
 
 It implements the knowledge management philosophy proposed by Karpathy: **knowledge is synthesized at ingest time, not query time**. Every time a new document is added, the LLM automatically extracts key points, establishes cross-references, flags contradictions, and updates the synthesis summary — making the knowledge base compound-grow with each ingest.
 
-The core difference from RAG: RAG dumps raw documents into a vector store and assembles answers on-the-fly at query time; `llm-wiki` compiles knowledge into durable wiki pages at ingest time, so queries read already-synthesized conclusions.
+The core difference from RAG: RAG dumps raw documents into a vector store and assembles answers on-the-fly at query time; `llm-wiki-skill` compiles knowledge into durable wiki pages at ingest time, so queries read already-synthesized conclusions.
 
 ---
 
@@ -95,7 +95,7 @@ Extracts explicit wikilinks (`EXTRACTED`) and AI-inferred semantic associations 
 
 ## Multimodal Support
 
-`llm-wiki` uses Claude's native multimodal capability to understand image content — not just OCR, but full semantic comprehension of diagrams, charts, and screenshots.
+`llm-wiki-skill` uses Claude's native multimodal capability to understand image content — not just OCR, but full semantic comprehension of diagrams, charts, and screenshots.
 
 ### Standalone Image Ingestion
 
