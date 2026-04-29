@@ -56,7 +56,6 @@ PAGE_DIRS = [
     Path("queries"),
     WIKI_DIR / "sources",
     WIKI_DIR / "syntheses",
-    WIKI_DIR / "archive",
     WIKI_DIR / "entities",
     WIKI_DIR / "concepts",
 ]
