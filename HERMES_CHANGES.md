@@ -1,7 +1,56 @@
 # Hermes 版本变更说明
 
 > 分支：`Hermes` | 基于原版 `llmrix/llm-wiki-skill` main 分支
-> 提交：`d81fec9`
+> 仓库：`https://github.com/vincentyzhj/llm-wiki-skill.git`
+
+---
+
+## 安装与初始化
+
+### 安装
+
+```bash
+# 克隆 Hermes 分支
+git clone -b Hermes https://github.com/vincentyzhj/llm-wiki-skill.git
+
+# Claude Code 项目
+cp -r llm-wiki-skill/skills/llm-wiki /你的项目/.claude/skills/llm-wiki
+
+# Hermes Agent
+cp -r llm-wiki-skill/skills/llm-wiki ~/.hermes/skills/llm-wiki
+```
+
+### 初始化
+
+```bash
+# 1. 设置 Wiki 工作区路径
+wiki-config workspace ~/my-wiki
+
+# 2. 初始化会自动创建完整目录结构（包括 SCHEMA.md、comparisons/、queries/ 等）
+
+# 3. ⚠️ 重要：编辑 SCHEMA.md，填写你的 Wiki 领域和标签分类法
+#    不编辑也能用，但 Agent 不会遵循标签约束和质量信号
+
+# 4. 摄入第一篇文档
+wiki-input ~/Downloads/paper.pdf --topic papers
+
+# 5. 查询
+wiki-query: 这篇论文的核心贡献是什么？
+
+# 6. 构建知识图谱
+wiki-graph
+
+# 7. 健康检查
+wiki-lint
+```
+
+### 图谱构建依赖
+
+```bash
+pip install networkx python-louvain anthropic
+```
+
+不安装也能用 Wiki 的摄入、查询、Lint 功能，只是无法自动生成 `graph.html`。
 
 ---
 

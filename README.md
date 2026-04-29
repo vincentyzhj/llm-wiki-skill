@@ -176,8 +176,99 @@ wiki-input ~/photos/whiteboard-session.jpg --topic meetings
 
 ---
 
+---
+
+## 安装与初始化
+
+### 安装
+
+将 `skills/llm-wiki/` 目录复制到 Claude Code 的 `.claude/skills/` 下：
+
+```bash
+# 克隆仓库（Hermes 分支）
+git clone -b Hermes https://github.com/vincentyzhj/llm-wiki-skill.git
+
+# 复制 Skill 到 Claude Code 项目
+cp -r llm-wiki-skill/skills/llm-wiki /你的项目/.claude/skills/llm-wiki
+```
+
+对于 Hermes Agent，Skills 目录为：
+
+```bash
+# 复制到 Hermes Agent 的 Skills 目录
+cp -r llm-wiki-skill/skills/llm-wiki ~/.hermes/skills/llm-wiki
+```
+
+### 初始化
+
+```bash
+# 1. 设置 Wiki 工作区路径
+wiki-config workspace ~/my-wiki
+
+# 2. 初始化会自动创建完整目录结构（包括 SCHEMA.md、comparisons/、queries/ 等）
+
+# 3. ⚠️ 重要：编辑 SCHEMA.md，填写你的 Wiki 领域和标签分类法
+#    这一步决定了后续所有摄入的质量约束
+#    打开 ~/my-wiki/SCHEMA.md 填写：
+#    - Domain: 你的 Wiki 覆盖的领域
+#    - 标签分类法: 定义 10-20 个顶级标签
+#    - 页面阈值: 创建/拆分/归档页面的规则
+
+# 4. 摄入第一篇文档
+wiki-input ~/Downloads/paper.pdf --topic papers
+
+# 5. 查询
+wiki-query: 这篇论文的核心贡献是什么？
+
+# 6. 构建知识图谱
+wiki-graph
+
+# 7. 健康检查
+wiki-lint
+```
+
+> **不编辑 SCHEMA.md 也能用**，但 Agent 在摄入时不会遵循标签约束和质量信号，等于丢掉了融合版的核心价值。
+
+### 目录结构（初始化后）
+
+```
+~/my-wiki/
+├── SCHEMA.md       ← 领域定义 + 标签分类法（需要手动编辑）
+├── index.md        ← 自动生成
+├── overview.md      ← 自动生成
+├── log.md          ← 自动生成
+├── raw/
+│   ├── articles/
+│   ├── papers/
+│   ├── transcripts/
+│   ├── assets/
+│   └── inbox/
+├── entities/
+├── concepts/
+├── comparisons/
+├── queries/
+├── wiki/
+│   ├── sources/
+│   ├── syntheses/
+│   └── archive/
+└── graph/
+```
+
+### 图谱构建依赖
+
+如需使用 `wiki-graph` 命令构建交互式知识图谱：
+
+```bash
+pip install networkx python-louvain anthropic
+```
+
+不安装也能用 Wiki 的摄入、查询、Lint 功能，只是无法自动生成 `graph.html`。
+
+---
+
 ## 参考
 
 - [Anthropic Skills — 官方 Skills 仓库](https://github.com/anthropics/skills)
 - [Andrej Karpathy — LLM Wiki 概念](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
+- [Hermes Agent — llm-wiki v2.1.0 Skill](https://github.com/vincentyzhj/llm-wiki-skill)
 - [SamurAIGPT — llm-wiki-agent](https://github.com/SamurAIGPT/llm-wiki-agent)
