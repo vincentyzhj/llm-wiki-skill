@@ -9,10 +9,16 @@
 `$ARGUMENTS` 是 `raw/` 目录下的文件路径，例如：
 
 ```
+# 固定分类目录示例
 wiki-ingest raw/papers/attention-is-all-you-need.pdf
-wiki-ingest raw/slides/q1-review.pptx
-wiki-ingest raw/reports/market-analysis.xlsx
 wiki-ingest raw/articles/my-article.md
+wiki-ingest raw/transcripts/meeting-notes.md
+wiki-ingest raw/assets/architecture-diagram.png
+
+# 自定义 topic 目录示例
+wiki-ingest raw/slides/q1-review.pptx        # topic: slides
+wiki-ingest raw/reports/market-analysis.xlsx # topic: reports
+wiki-ingest raw/inbox/unknown-file.pdf       # 默认归档
 ```
 
 ## 支持的格式

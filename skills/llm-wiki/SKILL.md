@@ -61,11 +61,16 @@ Layer 1 — raw/ 来源     不可变的原始文档（数据层）
 ├── log.md                       # 按时间追加型操作日志（超 500 条自动轮转）
 │
 ├── raw/                         # Layer 1: 不可变原始来源
+│   │
+│   ├── 固定分类目录（未指定 --topic 时自动判断归档）：
 │   ├── articles/                # 网页文章、剪报
 │   ├── papers/                  # PDF、arxiv 论文
 │   ├── transcripts/             # 会议笔记、访谈记录
-│   ├── assets/                  # 图片、图表（被 Wiki 页面引用）
-│   └── <custom-topic>/          # 自定义主题目录
+│   ├── assets/                  # 图片、图表
+│   ├── inbox/                   # 无法判断类型时的默认归档
+│   │
+│   └── 自定义主题目录（指定 --topic 时使用）：
+│   └── <topic>/                 # 用户自定义，新 topic 自动追加到 SCHEMA.md
 │
 ├── sources/                     # Layer 2: 每个原始文档的摘要页
 ├── entities/                    # Layer 2: 实体页（人物/公司/项目/产品）
@@ -79,7 +84,18 @@ Layer 1 — raw/ 来源     不可变的原始文档（数据层）
     └── graph.html               # 基于 vis.js 的独立可视化
 ```
 
-> **raw/ 目录规则**：允许一级子目录（如 `raw/articles/`、`raw/papers/`），不支持更深嵌套。
+### raw/ 目录归档规则
+
+| 场景 | 归档位置 | 说明 |
+|------|----------|------|
+| `--topic xxx` 显式指定 | `raw/<topic>/` | 用户自定义主题，优先级最高 |
+| 未指定 `--topic`，Agent 判断为文章 | `raw/articles/` | 网页内容、博客、新闻报道 |
+| 未指定 `--topic`，Agent 判断为论文 | `raw/papers/` | PDF、arxiv、学术文献 |
+| 未指定 `--topic`，Agent 判断为访谈 | `raw/transcripts/` | 会议记录、对话、访谈 |
+| 未指定 `--topic`，Agent 判断为图片 | `raw/assets/` | 截图、图表、照片 |
+| 未指定 `--topic`，无法判断类型 | `raw/inbox/` | 默认归档，用户可后续手动移动 |
+
+**新 topic 自动注册**：首次使用新 topic 时，Agent 自动追加到 `SCHEMA.md` 的 `raw_topics` 分类法中。
 
 ---
 
@@ -297,14 +313,30 @@ contradictions: [其他页面名]      # 与之冲突的页面
 
 将原始文件复制到 `raw/<topic>/` 作为永久归档，`source_file` 字段记录此归档路径。
 
-**主题确定逻辑**：
+**主题确定逻辑（并存模式）**：
 
-1. **显式指定**：命令行传入 `--topic <slug>`，直接使用
-2. **回退**：未指定时放入 `raw/inbox/`，并提示用户可手动移动后重新摄入
+| 优先级 | 条件 | 归档目录 |
+|--------|------|----------|
+| 1 | `--topic <slug>` 显式指定 | `raw/<slug>/` |
+| 2 | 未指定，Agent 判断为网页文章 | `raw/articles/` |
+| 3 | 未指定，Agent 判断为学术论文 | `raw/papers/` |
+| 4 | 未指定，Agent 判断为会议/访谈 | `raw/transcripts/` |
+| 5 | 未指定，Agent 判断为图片/图表 | `raw/assets/` |
+| 6 | 未指定，无法判断类型 | `raw/inbox/` |
+
+**判断依据**：
+- 文件扩展名：`.pdf` → papers，`.png/.jpg` → assets
+- 文件名关键词：`arxiv`、`paper`、`会议`、`访谈` 等
+- 内容特征：有标题/摘要结构 → papers，有对话格式 → transcripts
+
+**新 topic 自动注册**：
+- 首次使用新 topic（`--topic new-topic`）时
+- 自动追加到 `SCHEMA.md` 的 `raw_topics` 分类法
+- 同时创建 `raw/<new-topic>/` 目录
 
 **主题 slug 规则**：全小写，仅 `a-z`、`0-9`、连字符，最长 32 字符。
 
-如果 `raw/<topic>/` 不存在则创建。如果同名文件已存在，询问用户是否覆盖。
+如果归档目录不存在则创建。如果同名文件已存在，询问用户是否覆盖。
 
 ### 步骤 2 — 触发摄入流程
 

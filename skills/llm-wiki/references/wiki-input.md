@@ -52,18 +52,33 @@ wiki-input https://example.com/whitepaper.pdf
 
 ### 步骤 1.5 — 确定主题并归档到 raw/
 
-**主题确定逻辑**：
+**主题确定逻辑（并存模式）**：
 
-1. **显式指定**：命令行传入 `--topic <slug>`，直接使用
-2. **回退**：未指定时放入 `raw/inbox/`，并提示用户可手动移动后重新摄入
+| 优先级 | 条件 | 归档目录 |
+|--------|------|----------|
+| 1 | `--topic <slug>` 显式指定 | `raw/<slug>/` |
+| 2 | 未指定，Agent 判断为网页文章 | `raw/articles/` |
+| 3 | 未指定，Agent 判断为学术论文 | `raw/papers/` |
+| 4 | 未指定，Agent 判断为会议/访谈 | `raw/transcripts/` |
+| 5 | 未指定，Agent 判断为图片/图表 | `raw/assets/` |
+| 6 | 未指定，无法判断类型 | `raw/inbox/` |
+
+**判断依据**：
+- 文件扩展名：`.pdf` → papers，`.png/.jpg` → assets
+- 文件名关键词：`arxiv`、`paper`、`会议`、`访谈` 等
+- 内容特征：有标题/摘要结构 → papers，有对话格式 → transcripts
+
+**新 topic 自动注册**：
+- 首次使用新 topic 时，自动追加到 `SCHEMA.md` 的 `raw_topics` 分类法
 
 **主题 slug 规则**：全小写，仅 `a-z`、`0-9`、连字符，最长 32 字符。
 
 执行步骤：
-1. 如果 `raw/<topic>/` 不存在，自动创建
-2. 复制文件到 `raw/<topic>/<文件名>`
+1. 如果归档目录不存在，自动创建
+2. 复制文件到归档目录
 3. 如果同名文件已存在，询问用户是否覆盖；如拒绝，终止
 4. 远程文件的临时副本在复制完成后删除
+5. 如果是新 topic，追加到 `SCHEMA.md` 的 `raw_topics` 列表
 
 ### 步骤 2 — 触发摄入流程
 
