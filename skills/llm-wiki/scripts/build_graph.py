@@ -50,14 +50,11 @@ LOG_FILE_LEGACY = WIKI_DIR / "log.md"
 TEMPLATE_FILE = Path(__file__).parent.parent / "templates" / "wiki-graph-template.html"
 
 PAGE_DIRS = [
+    Path("sources"),
     Path("entities"),
     Path("concepts"),
     Path("comparisons"),
     Path("queries"),
-    WIKI_DIR / "sources",
-    WIKI_DIR / "syntheses",
-    WIKI_DIR / "entities",
-    WIKI_DIR / "concepts",
 ]
 
 NODE_COLORS = {
@@ -126,13 +123,10 @@ def resolve_link(link_text: str, all_page_labels: dict[str, str]) -> str | None:
     for pid, label in all_page_labels.items():
         if label.lower() == link_text.lower():
             return pid
-    for subdir in ("entities", "concepts", "comparisons", "queries", "sources", "syntheses"):
+    for subdir in ("entities", "concepts", "comparisons", "queries", "sources", "archive"):
         guess = Path(subdir) / f"{link_text}.md"
         if guess.exists():
             return slug_to_id(guess)
-        guess_wiki = WIKI_DIR / subdir / f"{link_text}.md"
-        if guess_wiki.exists():
-            return slug_to_id(guess_wiki)
     return None
 
 

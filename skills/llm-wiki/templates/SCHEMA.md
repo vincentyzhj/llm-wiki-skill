@@ -155,15 +155,12 @@ SHA256 计算范围：frontmatter 之后的正文内容，不包含 frontmatter 
 │   ├── transcripts/             # 会议/访谈
 │   └── assets/                  # 图片/图表
 │
+├── sources/                     # 每个原始文档的摘要页
 ├── entities/                    # 实体页
 ├── concepts/                    # 概念页
 ├── comparisons/                 # 对比分析页
 ├── queries/                     # 查询结果归档
-│
-├── wiki/                        # 兼容层（来源页和归档）
-│   ├── sources/                 # 每个原始文档的摘要页
-│   ├── syntheses/               # 查询答案归档（与 queries/ 并存）
-│   └── archive/                 # 归档的过期页面
+├── archive/                    # 归档的过期页面
 │
 └── graph/                       # 知识图谱
     ├── graph.json

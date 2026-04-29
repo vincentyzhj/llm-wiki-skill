@@ -65,17 +65,14 @@ Layer 1 — raw/ 来源     不可变的原始文档（数据层）
 │   ├── papers/                  # PDF、arxiv 论文
 │   ├── transcripts/             # 会议笔记、访谈记录
 │   ├── assets/                  # 图片、图表（被 Wiki 页面引用）
-│   └── <custom-topic>/          # 自定义主题目录（兼容旧版）
+│   └── <custom-topic>/          # 自定义主题目录
 │
+├── sources/                     # Layer 2: 每个原始文档的摘要页
 ├── entities/                    # Layer 2: 实体页（人物/公司/项目/产品）
 ├── concepts/                    # Layer 2: 概念页（概念/框架/方法论）
 ├── comparisons/                 # Layer 2: 对比分析页
 ├── queries/                     # Layer 2: 有价值的查询结果归档
-│
-├── wiki/                        # 兼容层（可选，与上方目录同步）
-│   ├── sources/                 # 每个原始文档的摘要页
-│   ├── syntheses/               # 查询答案归档（queries/ 的别名）
-│   └── archive/                 # 归档的过期页面
+├── archive/                     # Layer 2: 归档的过期页面
 │
 └── graph/                       # 知识图谱
     ├── graph.json               # 节点 + 边数据
@@ -83,7 +80,6 @@ Layer 1 — raw/ 来源     不可变的原始文档（数据层）
 ```
 
 > **raw/ 目录规则**：允许一级子目录（如 `raw/articles/`、`raw/papers/`），不支持更深嵌套。
-> **兼容说明**：`wiki/sources/` 和 `wiki/syntheses/` 保留用于兼容旧版，新页面优先写入 `queries/`。
 
 ---
 
@@ -175,14 +171,12 @@ contradictions: [其他页面名]      # 与之冲突的页面
 │   ├── transcripts/
 │   ├── assets/
 │   └── inbox/                   # 默认归档目录
+├── sources/
 ├── entities/
 ├── concepts/
 ├── comparisons/
 ├── queries/
-├── wiki/
-│   ├── sources/
-│   ├── syntheses/
-│   └── archive/
+├── archive/
 └── graph/
 ```
 
@@ -362,7 +356,7 @@ contradictions: [其他页面名]      # 与之冲突的页面
 1. **读取** `SCHEMA.md` — 理解领域约定和标签分类法
 2. **读取** `index.md` 和 `overview.md` — 获取当前 Wiki 上下文
 3. **搜索** 已有页面 — 针对提到的实体/概念搜索现有页面（一次性搜索，非逐个）
-4. **写入** `wiki/sources/<slug>.md` — 创建来源摘要页
+4. **写入** `sources/<slug>.md` — 创建来源摘要页
 5. **更新** `index.md` — 在对应主题分区追加新条目
 6. **更新** `overview.md` — 修订跨来源合成摘要
 7. **创建/更新** `entities/` — 为关键人物、公司、项目创建或更新页面
@@ -431,7 +425,7 @@ updated: YYYY-MM-DD
 ## 来源
 - concepts/RAG.md
 - concepts/VectorDB.md
-- wiki/sources/paper-rag-survey.md
+- sources/paper-rag-survey.md
 ```
 
 ---
@@ -519,7 +513,7 @@ python <skill-root>/scripts/build_graph.py [--skip-infer] [--open]
   ],
   "edges": [
     {
-      "source": "wiki/sources/paper-rag.md",
+      "source": "sources/paper-rag.md",
       "target": "concepts/RAG.md",
       "type": "EXTRACTED"
     },
@@ -734,8 +728,8 @@ def extract_xlsx(path: str) -> str:
 `log.md` 是唯一的完成状态指示器：
 
 - **日志中有此文件的 `ingest` 条目** → 正常完成，无需操作
-- **`wiki/sources/<slug>.md` 存在，但日志无对应条目** → 上次摄入在第 11 步前中断
-- **`wiki/sources/` 中无对应文件** → 摄入在早期步骤中断或从未开始
+- **`sources/<slug>.md` 存在，但日志无对应条目** → 上次摄入在第 11 步前中断
+- **`sources/` 中无对应文件** → 摄入在早期步骤中断或从未开始
 
 ### 恢复方法
 

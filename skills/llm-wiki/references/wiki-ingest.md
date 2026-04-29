@@ -55,7 +55,7 @@ wiki-ingest raw/articles/my-article.md
 1. 读取 `SCHEMA.md` 理解领域约定和标签分类法
 2. 读取 `index.md` 和 `overview.md` 获取当前上下文
 3. 搜索已有页面，针对提到的实体/概念查找现有页面
-4. 写入 `wiki/sources/<slug>.md`（来源页格式，见 [../templates/wiki-page-templates.md](../templates/wiki-page-templates.md)）
+4. 写入 `sources/<slug>.md`（来源页格式，见 [../templates/wiki-page-templates.md](../templates/wiki-page-templates.md)）
 5. 更新 `index.md`，在对应主题分区追加新条目
 6. 更新 `overview.md`，修订跨来源合成摘要
 7. 在 `entities/` 下创建/更新关键实体页

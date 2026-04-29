@@ -45,15 +45,12 @@ Layer 1 — raw/ 来源     不可变的原始文档（数据层）
 │   ├── assets/                  # 图片、图表
 │   └── <custom-topic>/          # 自定义主题目录
 │
+├── sources/                     # 每个原始文档的摘要页
 ├── entities/                    # 实体页（人物/公司/项目/产品）
 ├── concepts/                    # 概念页（概念/框架/方法论）
 ├── comparisons/                 # 对比分析页
 ├── queries/                     # 有价值的查询结果归档
-│
-├── wiki/                        # 兼容层
-│   ├── sources/                 # 每个原始文档的摘要页
-│   ├── syntheses/               # 查询答案归档（queries/ 的别名）
-│   └── archive/                 # 归档的过期页面
+├── archive/                    # 归档的过期页面
 │
 └── graph/
     ├── graph.json               # 节点 + 边数据

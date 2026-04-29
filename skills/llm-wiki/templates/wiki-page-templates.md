@@ -6,7 +6,7 @@
 
 ## 1. 来源页（Source Summary Page）
 
-路径：`wiki/sources/<slug>.md`
+路径：`sources/<slug>.md`
 
 ```markdown
 ---
@@ -108,8 +108,8 @@ confidence: high | medium | low
 [综合判断和推荐]
 
 ## 来源
-- [[wiki/sources/来源1]] — 引用原因
-- [[wiki/sources/来源2]] — 引用原因
+- [[sources/来源1]] — 引用原因
+- [[sources/来源2]] — 引用原因
 
 ## 参见
 - [[相关概念A]]
@@ -155,7 +155,7 @@ confidence: high | medium | low
 
 ## 5. 查询归档页（Query Answer Archive）
 
-路径：`queries/<slug>.md`（或 `wiki/syntheses/<slug>.md` 兼容旧版）
+路径：`queries/<slug>.md`
 
 ```markdown
 ---
@@ -178,7 +178,7 @@ updated: YYYY-MM-DD
 
 ## 来源
 
-- [[wiki/sources/来源1]] — 引用原因
+- [[sources/来源1]] — 引用原因
 - [[concepts/概念名]] — 引用原因
 
 ## 矛盾

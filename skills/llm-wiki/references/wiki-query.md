@@ -36,5 +36,5 @@ wiki-query: 不同来源对 Transformer 的观点有何差异？
 ## 来源
 - concepts/RAG.md
 - concepts/VectorDB.md
-- wiki/sources/paper-rag-survey.md
+- sources/paper-rag-survey.md
 ```
