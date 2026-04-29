@@ -45,14 +45,27 @@ GRAPH_DIR = Path("graph")
 CACHE_FILE = GRAPH_DIR / ".graph_cache.json"
 GRAPH_JSON = GRAPH_DIR / "graph.json"
 GRAPH_HTML = GRAPH_DIR / "graph.html"
-LOG_FILE   = WIKI_DIR / "log.md"
+LOG_FILE   = Path("log.md")
 TEMPLATE_FILE = Path(__file__).parent.parent / "templates" / "wiki-graph-template.html"
 
+PAGE_DIRS = [
+    Path("entities"),
+    Path("concepts"),
+    Path("comparisons"),
+    Path("queries"),
+    WIKI_DIR / "sources",
+    WIKI_DIR / "syntheses",
+    WIKI_DIR / "entities",
+    WIKI_DIR / "concepts",
+]
+
 NODE_COLORS = {
-    "source":    "#4A90D9",
-    "entity":    "#E8A838",
-    "concept":   "#5BA85A",
-    "synthesis": "#9B59B6",
+    "source":     "#4A90D9",
+    "entity":     "#E8A838",
+    "concept":    "#5BA85A",
+    "comparison": "#E74C3C",
+    "query":      "#1ABC9C",
+    "synthesis":  "#9B59B6",
 }
 
 WIKILINK_RE = re.compile(r"\[\[([^\]|#]+?)(?:\|[^\]]+?)?\]\]")
@@ -85,12 +98,14 @@ def parse_frontmatter(content: str) -> dict:
 
 
 def collect_pages() -> list[Path]:
-    """Return all .md page paths under wiki/ (excluding index/log/overview/lint-report)"""
+    """Return all .md page paths from PAGE_DIRS (excluding index/log/overview/lint-report)"""
     skip = {"index.md", "log.md", "overview.md", "lint-report.md"}
     pages = []
-    for p in WIKI_DIR.rglob("*.md"):
-        if p.name not in skip:
-            pages.append(p)
+    for d in PAGE_DIRS:
+        if d.exists():
+            for p in d.rglob("*.md"):
+                if p.name not in skip:
+                    pages.append(p)
     return pages
 
 
@@ -103,11 +118,13 @@ def resolve_link(link_text: str, all_page_labels: dict[str, str]) -> str | None:
     for pid, label in all_page_labels.items():
         if label.lower() == link_text.lower():
             return pid
-    # Guess path
-    for subdir in ("entities", "concepts", "sources", "syntheses"):
-        guess = WIKI_DIR / subdir / f"{link_text}.md"
+    for subdir in ("entities", "concepts", "comparisons", "queries", "sources", "syntheses"):
+        guess = Path(subdir) / f"{link_text}.md"
         if guess.exists():
             return slug_to_id(guess)
+        guess_wiki = WIKI_DIR / subdir / f"{link_text}.md"
+        if guess_wiki.exists():
+            return slug_to_id(guess_wiki)
     return None
 
 
@@ -234,8 +251,6 @@ def detect_communities(nodes_map: dict, edges: list[dict]) -> dict[str, int]:
     return partition
 
 
-# ── Generate graph.html ───────────────────────────────────────────────────────
-
 # ── Main Entry ────────────────────────────────────────────────────────────────
 
 def main():
@@ -259,7 +274,7 @@ def main():
     # Collect pages
     pages = collect_pages()
     if not pages:
-        print("No wiki pages found in wiki/. Run `wiki ingest` first.", file=sys.stderr)
+        print("No wiki pages found. Run wiki-ingest first.", file=sys.stderr)
         sys.exit(1)
 
     print(f"Found {len(pages)} wiki pages")

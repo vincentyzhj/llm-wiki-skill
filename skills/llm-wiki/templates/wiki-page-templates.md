@@ -1,176 +1,264 @@
-# Wiki Page Templates
+# Wiki 页面模板
 
-This document provides standard templates for the five page types in llm-wiki.
+本文档提供 llm-wiki 中六种页面类型的标准模板。
 
 ---
 
-## 1. Source Page (Source Summary Page)
+## 1. 来源页（Source Summary Page）
 
-Path: `wiki/sources/<slug>.md`
+路径：`wiki/sources/<slug>.md`
 
 ```markdown
 ---
-title: "Source Title"
+title: "来源标题"
 type: source
 tags: []
 date: YYYY-MM-DD
-source_file: raw/<topic>/<filename>
+source_file: raw/<topic>/<文件名>
 source_type: pdf | docx | pptx | xlsx | markdown | image
-last_updated: YYYY-MM-DD
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
 ---
 
-## Summary
-2-4 sentence comprehensive summary describing the document's core claims and value.
+## 摘要
+2-4 句综合摘要，描述文档的核心主张和价值。
 
-## Key Claims
-- Point 1
-- Point 2
-- Point 3
+## 关键主张
+- 要点 1
+- 要点 2
+- 要点 3
 
-## Key Quotes / Key Data
-> "Direct quote content" — Context description (no more than 125 characters)
+## 关键引用 / 关键数据
+> "直接引用内容" — 上下文描述（引用不超过 125 字符）
 
-## Connections
-- [[EntityName]] — Connection reason
-- [[ConceptName]] — Connection type
+## 关联
+- [[实体名]] — 关联原因
+- [[概念名]] — 关联类型
 
-## Contradictions
-- Conflicts with [[OtherPage]] on: specific description
+## 矛盾
+- 与 [[其他页面]] 在以下方面冲突：具体描述
 ```
 
 ---
 
-## 2. Article / Concept / Entity Page (Knowledge Pages)
+## 2. 概念页 / 实体页（Knowledge Pages）
 
-Path: `wiki/concepts/<Name>.md` or `wiki/entities/<Name>.md`
+路径：`concepts/<名称>.md` 或 `entities/<名称>.md`
 
 ```markdown
 ---
-title: "Page Title"
+title: "页面标题"
 type: concept | entity
-tags: []
+tags: [来自 SCHEMA.md 分类法]
 sources: [slug-1, slug-2]
-last_updated: YYYY-MM-DD
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+# 可选质量信号：
+confidence: high | medium | low
+contested: true
+contradictions: [其他页面名]
 ---
 
-## Overview
-2-4 sentence overview synthesizing core understanding from all sources. Don't copy sources verbatim, reorganize and express.
+## 概述
+2-4 句概述，综合所有来源的核心理解。不要逐字复制来源内容，要重新组织和表达。
 
-## Main Content Sections (organized by topic, not by source)
+## 主要内容（按主题组织，而非按来源）
 
-### Subtopic One
+### 子主题一
 ...
 
-### Subtopic Two
+### 子主题二
 ...
 
-## See Also
-- [[RelatedConcept]] — Connection reason (same topic)
-- [[../other-topic/AnotherConcept]] — Connection reason (cross-topic)
+## 参见
+- [[相关概念]] — 关联原因（同主题）
+- [[../其他主题/另一概念]] — 关联原因（跨主题）
 ```
 
 ---
 
-## 3. Index Page (Directory Page)
+## 3. 对比分析页（Comparison Page）
 
-Path: `wiki/index.md`
+路径：`comparisons/<对比名称>.md`
+
+```markdown
+---
+title: "A vs B 对比"
+type: comparison
+tags: [comparison, 相关标签]
+sources: [raw/articles/来源1.md, raw/articles/来源2.md]
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+confidence: high | medium | low
+---
+
+## 对比对象与目的
+[对比什么，为什么对比]
+
+## 对比维度
+
+| 维度 | A | B | 备注 |
+|------|---|---|------|
+| 性能 | ... | ... | |
+| 成本 | ... | ... | |
+| 生态 | ... | ... | |
+| 易用性 | ... | ... | |
+
+## 综合结论
+[综合判断和推荐]
+
+## 来源
+- [[wiki/sources/来源1]] — 引用原因
+- [[wiki/sources/来源2]] — 引用原因
+
+## 参见
+- [[相关概念A]]
+- [[相关概念B]]
+```
+
+---
+
+## 4. 索引页（Directory Page）
+
+路径：`index.md`
 
 ```markdown
 # Wiki Index
 
-_Last updated: YYYY-MM-DD_
+> 内容目录。每个 Wiki 页面在其类型下列出，带一行摘要。
+> 查询前先读此文件定位相关页面。
+> 最后更新：YYYY-MM-DD | 总页数：N
 
-## <Topic Name>
+## Entities
+<!-- 按字母顺序排列 -->
 
-> One-sentence description of this topic
+- [[OpenAI]] — 领先的人工智能研究实验室
+- [[SamAltman]] — OpenAI CEO
 
-| Article | Summary | Updated |
-|---|---|---|
-| [[ArticleName]] | One-sentence summary | YYYY-MM-DD |
-| [[AnotherArticle]] | One-sentence summary | YYYY-MM-DD |
+## Concepts
 
-## Sources
+- [[ReinforcementLearning]] — 通过与环境交互学习最优策略
+- [[RAG]] — 检索增强生成，结合外部知识源的生成方法
 
-| Source | Type | Ingested |
-|---|---|---|
-| [[sources/slug-1]] | pdf | YYYY-MM-DD |
-| [[sources/slug-2]] | markdown | YYYY-MM-DD |
+## Comparisons
+
+- [[gpt4-vs-claude]] — GPT-4 与 Claude 的多维度对比
+
+## Queries
+
+- [[transformer-attention-mechanism]] — Transformer 注意力机制详解
 ```
+
+**扩展规则**：当任何分区超过 50 个条目时，按首字母或子领域拆分子分区。当索引总条目超过 200 时，创建 `_meta/topic-map.md` 按主题分组页面以便更快导航。
 
 ---
 
-## 4. Synthesis Page (Query Answer Archive Page)
+## 5. 查询归档页（Query Answer Archive）
 
-Path: `wiki/syntheses/<slug>.md`
+路径：`queries/<slug>.md`（或 `wiki/syntheses/<slug>.md` 兼容旧版）
 
 ```markdown
 ---
-title: "Question Summary"
-type: synthesis
-tags: []
+title: "问题摘要"
+type: query
+tags: [相关标签]
 sources: [slug-1, slug-2]
 query_date: YYYY-MM-DD
-last_updated: YYYY-MM-DD
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
 ---
 
-## Question
+## 问题
 
-The complete query question.
+完整的查询问题。
 
-## Answer
+## 答案
 
-Synthesized answer with `[[PageName]]` inline citations to wiki pages. Direct quotes no more than 125 characters.
+综合答案，使用 `[[页面名]]` 行内引用指向 Wiki 页面。直接引用不超过 125 字符。
 
-## Sources
+## 来源
 
-- [[sources/slug-1]] — Citation reason
-- [[concepts/ConceptName]] — Citation reason
+- [[wiki/sources/来源1]] — 引用原因
+- [[concepts/概念名]] — 引用原因
 
-## Contradictions
+## 矛盾
 
-- Conflicts with [[OtherPage]] on: specific description (omit this section if none)
+- 与 [[其他页面]] 在以下方面冲突：具体描述（如无矛盾则省略此部分）
 ```
 
+> **归档规则**：只归档实质性的对比、深入分析或新颖综合。不要归档简单查找 — 只归档重新推导会很痛苦的答案。
+
 ---
 
-## 5. Archive Page (Archived Page)
+## 6. 归档页（Archived Page）
 
-Path: `wiki/archive/<original-name>.md`
+路径：`archive/<原始名称>.md`
 
 ```markdown
 ---
-title: "Original Page Title [Archived]"
+title: "原始页面标题 [已归档]"
 type: source | concept | entity
 archived_date: YYYY-MM-DD
-superseded_by: "[[NewPageName]]"
+superseded_by: "[[新页面名]]"
 sources: []
-last_updated: YYYY-MM-DD
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
 ---
 
-> **This page has been archived**, content has been superseded by [[NewPageName]] and will no longer update with source changes.
+> **此页面已归档**，内容已被 [[新页面名]] 取代，不再随来源变化而更新。
 
-## Overview (Snapshot at time of archiving)
+## 概述（归档时的快照）
 ...
 
-## See Also
-- [[NewPageName]] — Current valid version
+## 参见
+- [[新页面名]] — 当前有效版本
 ```
 
 ---
 
-## Raw Source Template (Raw Material Archive)
+## Raw 来源模板（原始材料归档）
 
-Path: `raw/<topic>/<filename>` (original file, with optional frontmatter comment)
+路径：`raw/<topic>/<文件名>`（原始文件，可选添加 frontmatter 注释）
 
 ```
 ---
-title: "Original Document Title"
-url: https://... (if from web)
+title: "原始文档标题"
+url: https://...（如来自网络）
 date: YYYY-MM-DD
-author: Author Name
+author: 作者名
+ingested: YYYY-MM-DD
+sha256: <正文内容的十六进制摘要>
 ---
 
-{Original content, unmodified}
+{原始内容，不可修改}
 ```
 
-> Files in `raw/` are **never modified**, this is the immutability foundation of the wiki system.
+> `raw/` 中的文件**永不修改**，这是 Wiki 系统的不可变性基石。
+> 修正应写入 Wiki 页面，而非修改原始来源。
+
+---
+
+## Overview 页模板（跨来源合成摘要）
+
+路径：`overview.md`
+
+```markdown
+# Wiki Overview
+
+> 跨所有来源的动态合成摘要。每次摄入新来源后自动更新。
+> 最后更新：YYYY-MM-DD
+
+## 核心主题概览
+
+### 主题一
+[综合多个来源的概要]
+
+### 主题二
+[综合多个来源的概要]
+
+## 关键趋势
+[从所有来源中识别出的趋势]
+
+## 未解决问题
+[跨来源识别的开放问题或争议]
+```

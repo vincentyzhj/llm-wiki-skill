@@ -1,40 +1,40 @@
-# wiki-graph — Knowledge Graph Build Command
+# wiki-graph — 知识图谱构建命令
 
-Build Wiki knowledge graph.
+构建 Wiki 知识图谱。
 
-**Trigger**: `wiki-graph` or `构建知识图谱`
+**触发**：`wiki-graph` 或 `构建知识图谱`
 
-## Parameter
+## 参数
 
-No parameters.
+无参数。
 
-## Execution Flow
+## 执行流程
 
-Execute according to **Graph Workflow** in SKILL.md:
+按照 SKILL.md 中的 **图谱流程** 执行：
 
-### Method A — Python Script (Preferred)
+### 方法 A — Python 脚本（推荐）
 
-> **Important**: Script uses relative paths, must execute in **WIKI_ROOT directory**.
+> **重要**：脚本使用相对路径，必须在 **WIKI_ROOT 目录** 中执行。
 
 ```bash
 cd <WIKI_ROOT>
 python <skill-root>/scripts/build_graph.py [--skip-infer] [--open]
 ```
 
-Parameter description:
-- `--skip-infer`: Skip AI semantic inference, only extract explicit wikilinks (fast mode, no `ANTHROPIC_API_KEY` needed)
-- `--open`: Auto-open `graph/graph.html` in browser after build completes
+参数说明：
+- `--skip-infer`：跳过 AI 语义推断，仅提取显式 wikilinks（快速模式，无需 `ANTHROPIC_API_KEY`）
+- `--open`：构建完成后自动在浏览器中打开 `graph/graph.html`
 
-Script supports incremental caching, pages with unchanged content reuse previous inference results, cache stored in `graph/.graph_cache.json`.
+脚本支持增量缓存，内容未变的页面复用之前的推断结果，缓存存储在 `graph/.graph_cache.json`。
 
-Dependencies: `pip install networkx python-louvain anthropic`
+依赖：`pip install networkx python-louvain anthropic`
 
-### Method B — Claude Manual Build (When no Python environment)
+### 方法 B — 纯 Claude 手动构建（无 Python 环境时）
 
-1. Use Grep to find all `[[wikilinks]]` under `wiki/` directory
-2. Build node list: Each wiki page is a node, type from frontmatter
-3. Build edge list: Explicit wikilink marked as `EXTRACTED`, semantic inferred edges (confidence ≥ 0.5) marked as `INFERRED`, edges with confidence < 0.5 filtered out
-4. Write `graph/graph.json` (contains build_date, nodes, edges)
-5. Write `graph/graph.html` (use [../templates/wiki-graph-template.html](../templates/wiki-graph-template.html) inject data)
-6. Append log to `wiki/log.md`: `## [today's date] graph | Knowledge graph rebuilt`
-7. Output stats: node count, edge count, type distribution, top 5 hub pages
+1. 使用 Grep 在 `entities/`、`concepts/`、`comparisons/`、`queries/`、`wiki/` 下查找所有 `[[wikilinks]]`
+2. 构建节点列表：每个 Wiki 页面是一个节点，类型来自 frontmatter
+3. 构建边列表：显式 wikilink 标记为 `EXTRACTED`，语义推断边（置信度 ≥ 0.5）标记为 `INFERRED`，置信度 < 0.5 的推断边被过滤
+4. 写入 `graph/graph.json`（包含 build_date、nodes、edges）
+5. 写入 `graph/graph.html`（使用 [../templates/wiki-graph-template.html](../templates/wiki-graph-template.html) 注入数据）
+6. 追加日志到 `log.md`：`## [YYYY-MM-DD] graph | 知识图谱已重建`
+7. 输出统计：节点数、边数、类型分布、前 5 个枢纽页面

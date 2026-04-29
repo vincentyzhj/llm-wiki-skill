@@ -1,34 +1,41 @@
-# wiki-lint — Wiki Quality Check Command
+# wiki-lint — Wiki 质量检查命令
 
-Check Wiki quality, find orphaned pages, broken links, contradictions and other issues.
+检查 Wiki 质量，发现孤立页面、坏链、矛盾等问题。
 
-**Trigger**: `wiki-lint` or `wiki 检查`
+**触发**：`wiki-lint` 或 `wiki 检查` 或 `wiki 健康检查`
 
-## Parameter
+## 参数
 
-No parameters.
+无参数。
 
-## Execution Flow
+## 执行流程
 
-Execute according to **Lint Workflow** in SKILL.md (two phases):
+按照 SKILL.md 中的 **Lint 流程** 执行（两个阶段）：
 
-**Step 0** — Parse WIKI_ROOT (`.claude/config/llm-wiki.json` → cwd), all paths based on WIKI_ROOT.
+**步骤 0** — 解析 WIKI_ROOT（`.claude/config/llm-wiki.json` → cwd），所有路径基于 WIKI_ROOT。如果 `index.md` 不存在或无条目，提示用户先运行 `wiki-ingest`，然后停止。
 
-### Phase One — Deterministic Checks (Grep + Read)
+### 第一阶段 — 确定性检查（Grep + Read）
 
-1. **Orphaned pages** — Pages not referenced by any other page's `[[link]]`
-2. **Broken links** — `[[WikiLink]]` pointing to non-existent pages
-3. **Index consistency** — Whether pages listed in `wiki/index.md` actually exist
-4. **Missing entity pages** — Entities mentioned in 3+ pages but without standalone pages
+1. **孤立页面** — 没有被任何其他页面的 `[[link]]` 引用的页面
+2. **坏链** — 指向不存在页面的 `[[WikiLink]]`
+3. **索引一致性** — `index.md` 中列出的页面是否实际存在
+4. **缺失实体页** — 在 3+ 页面中提到但没有独立页面的实体
+5. **标签审计** — 列出所有使用中的标签，标记不在 SCHEMA.md 分类法中的标签
+6. **来源漂移** — 对 `raw/` 中有 `sha256` 的文件重新计算哈希，标记不匹配项
+7. **页面大小** — 标记超过 200 行的页面 — 拆分候选
+8. **日志轮转** — 如果 `log.md` 超过 500 条，轮转它
 
-### Phase Two — Semantic Analysis (Claude reads max 20 page samples)
+### 第二阶段 — 语义分析（Claude 读取最多 20 页样本）
 
-5. **Content contradictions** — Conflicting claims across pages
-6. **Outdated summaries** — Pages not updated after newer source ingestion
-7. **Underdeveloped concepts** — Thin concept pages referenced in many places
-8. **Knowledge gaps** — Typical questions the wiki can't answer, suggest supplementing sources
+9. **内容矛盾** — 跨页面的冲突主张。暴露所有 `contested: true` 或 `contradictions:` frontmatter 的页面供用户审查
+10. **过期摘要** — 在更新来源摄入后未更新的页面
+11. **欠发达概念** — 被多处引用但内容单薄的概念页
+12. **知识缺口** — Wiki 无法回答的典型问题，建议补充来源
+13. **质量信号** — 列出 `confidence: low` 的页面，以及仅引用单一来源但未设置 confidence 字段的页面
 
-## Output
+## 输出
 
-Generate structured lint report, organized by category and severity. Ask user whether to save as `wiki/lint-report.md`.
-Append log to `wiki/log.md`: `## [YYYY-MM-DD] lint | Wiki health check`
+生成结构化 Lint 报告，按类别和严重程度分组。询问是否保存为 `lint-report.md`。
+追加日志到 `log.md`：`## [YYYY-MM-DD] lint | 发现 N 个问题`
+
+**严重程度排序**：坏链 > 孤立页 > 来源漂移 > 矛盾页 > 过期内容 > 样式问题

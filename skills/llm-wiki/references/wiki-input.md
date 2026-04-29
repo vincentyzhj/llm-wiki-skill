@@ -1,14 +1,14 @@
-# wiki-input — Arbitrary Path File Ingestion Command
+# wiki-input — 任意路径文件摄入命令
 
-Accept files from any local path (or remote OSS path), **copy to `raw/<topic>/` for archiving then ingest**, triggering complete Ingest workflow.
+接受任意本地路径（或远程 OSS 路径）的文件，**先复制到 `raw/<topic>/` 归档，再摄入**，触发完整摄入流程。
 
-**WIKI_ROOT is strictly determined by `workspace` in `.claude/config/llm-wiki.json`, unrelated to input file path.**
+**WIKI_ROOT 严格由 `.claude/config/llm-wiki.json` 中的 `workspace` 确定，与输入文件路径无关。**
 
-**Trigger**: `wiki-input <path> [--topic <slug>]` / `wiki 输入 <path>`
+**触发**：`wiki-input <path> [--topic <slug>]` / `wiki 输入 <path>`
 
 ---
 
-## Command
+## 命令
 
 ### `wiki-input <path> [--topic <slug>]`
 
@@ -21,106 +21,106 @@ wiki-input oss://my-bucket/documents/report.pdf --topic oneservice
 wiki-input https://example.com/whitepaper.pdf
 ```
 
-When `--topic` is not specified, file is archived to `raw/inbox/`.
+未指定 `--topic` 时，文件归档到 `raw/inbox/`。
 
 ---
 
-## Execution Flow
+## 执行流程
 
-### Step 0 — Determine WIKI_ROOT
+### 步骤 0 — 确定 WIKI_ROOT
 
-Read `workspace` field from `.claude/config/llm-wiki.json`, expand `~` to absolute path. If directory doesn't exist, **auto-create complete directory structure at that path** then continue. **Do not infer WIKI_ROOT from input file path, do not fallback to cwd.**
+从 `.claude/config/llm-wiki.json` 读取 `workspace` 字段，展开 `~` 为绝对路径。目录不存在则**在该路径自动创建完整目录结构**后继续。**不要从输入文件路径推断 WIKI_ROOT，配置文件存在时不要回退到 cwd。**
 
-### Step 1 — Path Resolution and Validation
+### 步骤 1 — 路径解析与验证
 
-1. Expand path:
-   - `~` expands to user home directory
-   - Windows paths `C:/...` or `C:\...` used directly
-   - Relative paths expanded based on current working directory
-2. Verify file exists and is readable; if not, error and terminate
-3. Identify file extension, confirm it's a supported type (see supported formats table below)
+1. 展开路径：
+   - `~` 展开为用户家目录
+   - Windows 路径 `C:/...` 或 `C:\...` 直接使用
+   - 相对路径基于当前工作目录展开
+2. 验证文件存在且可读；如不可读，报错并终止
+3. 识别文件扩展名，确认是支持的格式（见下方支持格式表）
 
-For remote paths, first download to temp directory, then continue with subsequent steps:
+对于远程路径，先下载到临时目录，再继续后续步骤：
 
-| Path Prefix | Download Method |
+| 路径前缀 | 下载方法 |
 |---|---|
 | `oss://` | `ossutil cp <path> /tmp/wiki-input-tmp/` |
 | `s3://` | `aws s3 cp <path> /tmp/wiki-input-tmp/` |
-| `http(s)://` | `curl -L <url> -o /tmp/wiki-input-tmp/<filename>` |
+| `http(s)://` | `curl -L <url> -o /tmp/wiki-input-tmp/<文件名>` |
 
-If required CLI tool is unavailable, prompt user to install and terminate.
+如所需 CLI 工具未安装，提示用户安装并终止。
 
-### Step 1.5 — Determine Topic and Archive to raw/
+### 步骤 1.5 — 确定主题并归档到 raw/
 
-**Topic Determination Logic:**
+**主题确定逻辑**：
 
-1. **Explicit specification**: Command-line `--topic <slug>` passed, use directly
-2. **Fallback**: If not specified, put in `raw/inbox/`, and prompt user they can manually move and re-ingest later
+1. **显式指定**：命令行传入 `--topic <slug>`，直接使用
+2. **回退**：未指定时放入 `raw/inbox/`，并提示用户可手动移动后重新摄入
 
-**Topic slug rules**: All lowercase, only `a-z`, `0-9`, hyphens, max 32 characters.
+**主题 slug 规则**：全小写，仅 `a-z`、`0-9`、连字符，最长 32 字符。
 
-Execution steps:
-1. If `raw/<topic>/` doesn't exist, auto-create
-2. Copy file to `raw/<topic>/<filename>`
-3. If same-name file exists, ask user whether to overwrite; if declined, terminate
-4. Temp copy of remote file deleted after copy completes
+执行步骤：
+1. 如果 `raw/<topic>/` 不存在，自动创建
+2. 复制文件到 `raw/<topic>/<文件名>`
+3. 如果同名文件已存在，询问用户是否覆盖；如拒绝，终止
+4. 远程文件的临时副本在复制完成后删除
 
-### Step 2 — Trigger Ingest Workflow
+### 步骤 2 — 触发摄入流程
 
-Execute complete Ingest flow on `raw/<topic>/<filename>` (dedup check → multimodal extract → Wiki write).
+对 `raw/<topic>/<文件名>` 执行完整摄入流程（去重检查 → 多模态提取 → Wiki 写入）。
 
-- `source_file` field records `raw/<topic>/<filename>` path
-- Original URL / OSS path of remote file recorded in source page's `## Notes` section
+- `source_file` 字段记录 `raw/<topic>/<文件名>` 路径
+- 远程文件的原始 URL / OSS 路径记录在来源页的 `## 备注` 部分
 
 ---
 
-## Supported File Formats
+## 支持的文件格式
 
-| Extension | Extraction Method |
+| 扩展名 | 提取方法 |
 |---|---|
-| `.md` `.txt` `.json` `.yaml` | Direct Read tool |
-| `.pdf` | pdf skill (pdfplumber) |
-| `.docx` | docx skill (python-docx) |
-| `.pptx` `.ppt` (after conversion) | pptx skill |
+| `.md` `.txt` `.json` `.yaml` | 直接 Read 工具 |
+| `.pdf` | pdf skill（pdfplumber） |
+| `.docx` | docx skill（python-docx） |
+| `.pptx` `.ppt`（转换后） | pptx skill |
 | `.xlsx` `.csv` | xlsx skill |
-| `.png` `.jpg` `.jpeg` `.webp` | Claude vision |
+| `.png` `.jpg` `.jpeg` `.webp` | Claude 视觉 |
 
-> `.ppt` (legacy PowerPoint) needs to be converted to `.pptx` first using LibreOffice:
+> `.ppt`（旧版 PowerPoint）需先用 LibreOffice 转为 `.pptx`：
 > `libreoffice --headless --convert-to pptx file.ppt`
 
 ---
 
-## Remote OSS File Support
+## 远程 OSS 文件支持
 
-### Alibaba Cloud OSS (`oss://`)
+### 阿里云 OSS（`oss://`）
 
-**Prerequisites**:
-- `ossutil` installed (`ossutil version` executable)
-- Access credentials configured (`ossutil config` or environment variables `OSS_ACCESS_KEY_ID` / `OSS_ACCESS_KEY_SECRET`)
-- Read permission on corresponding bucket
+**前置条件**：
+- 已安装 `ossutil`（`ossutil version` 可执行）
+- 已配置访问凭证（`ossutil config` 或环境变量 `OSS_ACCESS_KEY_ID` / `OSS_ACCESS_KEY_SECRET`）
+- 对相应 bucket 有读取权限
 
-### AWS S3 (`s3://`)
+### AWS S3（`s3://`）
 
-**Prerequisites**:
-- `aws` CLI installed
-- Credentials configured (`aws configure` or environment variables `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`)
-- IAM permissions include `s3:GetObject`
+**前置条件**：
+- 已安装 `aws` CLI
+- 已配置凭证（`aws configure` 或环境变量 `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`）
+- IAM 权限包含 `s3:GetObject`
 
-### Other Remote Protocols
+### 其他远程协议
 
-| Protocol | Support Method |
+| 协议 | 支持方式 |
 |---|---|
-| `http://` / `https://` | curl, no extra dependencies |
-| `gs://` | `gsutil cp` (requires Google Cloud SDK) |
-| `sftp://` / `scp` | Manual download required, then use local path |
+| `http://` / `https://` | curl，无需额外依赖 |
+| `gs://` | `gsutil cp`（需 Google Cloud SDK） |
+| `sftp://` / `scp` | 需手动下载，再使用本地路径 |
 
 ---
 
-## Difference from `wiki-ingest`
+## 与 `wiki-ingest` 的区别
 
 | | `wiki-ingest` | `wiki-input` |
 |---|---|---|
-| File location | Already in `raw/` directory | Any local or remote path |
-| File copy | Not needed | Auto-copy to `raw/<topic>/` |
-| Topic specification | File path represents topic | `--topic <slug>`, default `inbox` |
-| Use case | Manually manage raw/ then ingest | Ingest directly from any location with auto-archive |
+| 文件位置 | 已在 `raw/` 目录中 | 任意本地或远程路径 |
+| 文件复制 | 不需要 | 自动复制到 `raw/<topic>/` |
+| 主题指定 | 文件路径即代表主题 | `--topic <slug>`，默认 `inbox` |
+| 使用场景 | 手动管理 raw/ 后摄入 | 从任意位置直接摄入，自动归档 |

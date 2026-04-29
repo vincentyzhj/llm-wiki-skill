@@ -1,175 +1,183 @@
-# LLM Wiki Skill — Multimodal Knowledge Graph Skill
+# LLM Wiki Skill — 多模态知识图谱 Skill
 
-> *"LLM writes and maintains the wiki; humans read and ask questions."*
+> *"LLM 写入并维护 Wiki；人类阅读和提问。"*
 
-![LLM Wiki Architecture](./skills/llm-wiki/assets/llm-wiki.svg)
+![LLM Wiki 架构](./skills/llm-wiki/assets/llm-wiki.zh-CN.svg)
 
-**Available in:** [简体中文](lang/README.zh-CN.md) | [繁體中文](lang/README.zh-TW.md) | [日本語](lang/README.ja.md) | [한국어](lang/README.ko.md) | [Français](lang/README.fr.md) | [Русский](lang/README.ru.md) | [Español](lang/README.es.md)
+**多语言版本:** [简体中文](lang/README.zh-CN.md) | [繁體中文](lang/README.zh-TW.md) | [日本語](lang/README.ja.md) | [한국어](lang/README.ko.md) | [Français](lang/README.fr.md) | [Русский](lang/README.ru.md) | [Español](lang/README.es.md)
 
-
----
-
-## What is this?
-
-`llm-wiki-skill` is a Skill running inside Claude Code that ingests raw documents of any format (PDF, DOCX, PPTX, XLSX, Markdown, images) into a structured Wiki and automatically builds an interactive knowledge graph (`graph.html`).
-
-It implements the knowledge management philosophy proposed by Karpathy: **knowledge is synthesized at ingest time, not query time**. Every time a new document is added, the LLM automatically extracts key points, establishes cross-references, flags contradictions, and updates the synthesis summary — making the knowledge base compound-grow with each ingest.
-
-The core difference from RAG: RAG dumps raw documents into a vector store and assembles answers on-the-fly at query time; `llm-wiki-skill` compiles knowledge into durable wiki pages at ingest time, so queries read already-synthesized conclusions.
 
 ---
 
-## Directory Structure
+## 这是什么？
+
+`llm-wiki-skill` 是一个运行在 Claude Code 中的 Skill，可将任意格式的原始文档（PDF、DOCX、PPTX、XLSX、Markdown、图片）摄入为结构化 Wiki，并自动构建交互式知识图谱（`graph.html`）。
+
+它实现了 Karpathy 提出的知识管理理念：**知识在摄入时合成，而非查询时组装**。每次添加新文档时，LLM 自动提取要点、建立交叉引用、标记矛盾并更新合成摘要——使知识库随每次摄入产生复利增长。
+
+与 RAG 的核心区别：RAG 将原始文档倒入向量存储并在查询时临时组装答案；`llm-wiki-skill` 在摄入时将知识编译为持久的 Wiki 页面，查询时直接读取已合成的结论。
+
+### 三层架构
+
+```
+Layer 3 — SCHEMA.md     定义领域、约定、标签分类法（约束层）
+    ↓
+Layer 2 — Wiki 页面      entity/concept/comparison/query 页面（知识层）
+    ↓
+Layer 1 — raw/ 来源     不可变的原始文档（数据层）
+```
+
+---
+
+## 目录结构
 
 ```
 <wiki-root>/
-  raw/                  # Raw documents (never modified)
-    <topic>/            # Organized by topic, one-level subdirectories
-  wiki/
-    index.md            # Table of contents for all pages (partitioned by topic)
-    overview.md         # Living synthesis across all sources
-    log.md              # Append-only operation log
-    sources/            # Summary page for each raw document
-    entities/           # People / companies / projects / products
-    concepts/           # Concepts / frameworks / methodologies
-    syntheses/          # Archived query answers
-    archive/            # Archived outdated pages
-  graph/
-    graph.json          # Nodes + edges data
-    graph.html          # Self-contained visualization based on vis.js
+├── SCHEMA.md                    # 领域定义 + 标签分类法 + 约定
+├── index.md                     # 分区内容目录，每页一行摘要
+├── overview.md                  # 跨来源动态合成摘要
+├── log.md                       # 按时间追加型操作日志（超 500 条自动轮转）
+│
+├── raw/                         # 不可变原始来源
+│   ├── articles/                # 网页文章、剪报
+│   ├── papers/                  # PDF、arxiv 论文
+│   ├── transcripts/             # 会议笔记、访谈
+│   ├── assets/                  # 图片、图表
+│   └── <custom-topic>/          # 自定义主题目录
+│
+├── entities/                    # 实体页（人物/公司/项目/产品）
+├── concepts/                    # 概念页（概念/框架/方法论）
+├── comparisons/                 # 对比分析页
+├── queries/                     # 有价值的查询结果归档
+│
+├── wiki/                        # 兼容层
+│   ├── sources/                 # 每个原始文档的摘要页
+│   ├── syntheses/               # 查询答案归档（queries/ 的别名）
+│   └── archive/                 # 归档的过期页面
+│
+└── graph/
+    ├── graph.json               # 节点 + 边数据
+    └── graph.html               # 基于 vis.js 的独立可视化
 ```
 
 ---
 
-## Command Reference
+## 命令参考
 
-| Command | Purpose |
+| 命令 | 功能 |
 |---|---|
-| `wiki-config workspace <path>` | Set the wiki workspace path |
-| `wiki-config show` | View current config and directory status |
-| `wiki-input <path> [--topic <slug>]` | Ingest any file path (auto-archives to `raw/<topic>/`) |
-| `wiki-ingest <file>` | Ingest a file already in `raw/` |
-| `wiki-query: <question>` | Query the knowledge base, synthesize answer |
-| `wiki-lint` | Check for orphan pages, broken links, contradictions |
-| `wiki-graph` | Build the interactive knowledge graph (`graph.html`) |
+| `wiki-config workspace <path>` | 设置 wiki 工作区路径 |
+| `wiki-config show` | 查看当前配置和目录状态 |
+| `wiki-input <path> [--topic <slug>]` | 摄入任意文件路径（自动归档到 `raw/<topic>/`） |
+| `wiki-ingest <file>` | 摄入已在 `raw/` 中的文件 |
+| `wiki-query: <问题>` | 查询知识库，综合答案 |
+| `wiki-lint` | 检查孤立页、坏链、矛盾、来源漂移等 |
+| `wiki-graph` | 构建交互式知识图谱（`graph.html`） |
 
-**Recommended for daily use: `wiki-input`** — accepts local or remote paths, automatically copies to `raw/<topic>/` before ingesting. No manual management of the `raw/` directory needed.
-
----
-
-## Workflow
-
-### Ingest
-
-When ingesting a document, the LLM executes in sequence:
-
-1. Multimodal content extraction (PDF/DOCX/PPTX/XLSX/images → Markdown)
-2. Write `wiki/sources/<slug>.md` (summary, key points, key quotes)
-3. Update `wiki/index.md` and `wiki/overview.md`
-4. Create or update `wiki/entities/` and `wiki/concepts/` pages
-5. Flag contradictions with existing content
-6. Append operation log to `wiki/log.md`
-
-### Query
-
-Reads `wiki/index.md` to identify relevant pages, synthesizes an answer with inline `[[PageName]]` references. Optionally archives the answer as `wiki/syntheses/<slug>.md`.
-
-### Knowledge Graph
-
-Extracts explicit wikilinks (`EXTRACTED`) and AI-inferred semantic associations (`INFERRED`, confidence ≥ 0.5) between pages, generating a zero-dependency self-contained `graph.html` with node-type coloring and community grouping.
+**日常使用推荐：`wiki-input`** — 接受本地或远程路径，摄入前自动复制到 `raw/<topic>/` 归档。无需手动管理 `raw/` 目录。
 
 ---
 
-## Supported Formats
+## 工作流
 
-| Format | Extraction Method |
+### 摄入
+
+摄入文档时，LLM 按顺序执行：
+
+1. 读取 `SCHEMA.md` 理解领域约定和标签分类法
+2. 多模态内容提取（PDF/DOCX/PPTX/XLSX/图片 → Markdown）
+3. 写入 `wiki/sources/<slug>.md`（摘要、要点、关键引用）
+4. 更新 `index.md` 和 `overview.md`
+5. 创建或更新 `entities/`、`concepts/` 页面
+6. 如来源包含对比信息，创建或更新 `comparisons/` 页面
+7. 标记与现有内容的矛盾
+8. 追加操作日志到 `log.md`
+
+### 查询
+
+读取 `index.md` 识别相关页面，综合答案并使用 `[[页面名]]` 行内引用。实质性答案可归档到 `queries/<slug>.md`。
+
+### 知识图谱
+
+提取页面间的显式 wikilinks（`EXTRACTED`）和 AI 推断的语义关联（`INFERRED`，置信度 ≥ 0.5），生成零依赖的独立 `graph.html`，带节点类型着色和社区分组。
+
+---
+
+## 支持的格式
+
+| 格式 | 提取方法 |
 |---|---|
-| `.md` `.txt` | Direct read |
-| `.pdf` | pdfplumber (text + tables) |
-| `.docx` | python-docx (body + headings + tables) |
-| `.pptx` | python-pptx (titles + body + notes) |
-| `.xlsx` `.csv` | pandas (converted to Markdown tables) |
-| `.png` `.jpg` `.jpeg` `.webp` `.gif` `.bmp` | Claude vision (multimodal) |
+| `.md` `.txt` | 直接读取 |
+| `.pdf` | pdfplumber（文本 + 表格） |
+| `.docx` | python-docx（正文 + 标题 + 表格） |
+| `.pptx` | python-pptx（标题 + 正文 + 备注） |
+| `.xlsx` `.csv` | pandas（转为 Markdown 表格） |
+| `.png` `.jpg` `.jpeg` `.webp` `.gif` `.bmp` | Claude 视觉（多模态） |
 
 ---
 
-## Multimodal Support
+## 快速开始
 
-`llm-wiki-skill` uses Claude's native multimodal capability to understand image content — not just OCR, but full semantic comprehension of diagrams, charts, and screenshots.
+```bash
+# 1. 设置 wiki 工作区
+wiki-config workspace ~/my-wiki
 
-### Standalone Image Ingestion
+# 2. 摄入第一篇文档
+wiki-input ~/Downloads/paper.pdf --topic papers
 
-Pass any image file directly to `wiki-input` or `wiki-ingest`. Claude reads the image and converts its content to structured Markdown before the standard Ingest workflow runs:
+# 3. 查询
+wiki-query: 这篇论文的核心贡献是什么？
+
+# 4. 构建知识图谱
+wiki-graph
+```
+
+> **首次初始化后**：编辑 `SCHEMA.md`，填写你的 Wiki 覆盖的领域和标签分类法。
+
+---
+
+## 新增功能（融合版）
+
+| 功能 | 说明 |
+|------|------|
+| **SCHEMA.md 约束** | 定义领域、标签分类法、页面约定，确保一致性 |
+| **三层架构** | Raw → Wiki → Schema 分层，知识管理更清晰 |
+| **comparisons/** | 专门的对比分析页目录，支持多维度表格对比 |
+| **queries/** | 查询结果归档，替代 syntheses/（兼容旧版） |
+| **质量信号** | `confidence`、`contested`、`contradictions` frontmatter 字段 |
+| **来源漂移检测** | SHA256 检测，重新摄入同一 URL 时自动发现内容变化 |
+| **标签审计** | 标签必须在 SCHEMA.md 分类法中预定义，防止标签泛滥 |
+| **日志轮转** | log.md 超 500 条自动轮转为 log-YYYY.md |
+| **页面拆分** | 页面超 200 行自动提示拆分为子主题 |
+| **会话定向** | 每次会话开始必须先读 SCHEMA + index + 最近 log，防止重复和矛盾 |
+
+---
+
+## 多模态支持
+
+`llm-wiki-skill` 使用 Claude 的原生多模态能力理解图像内容——不仅是 OCR，而是全面语义理解图表、图表和截图。
+
+### 独立图片摄入
+
+直接将图片文件传给 `wiki-input` 或 `wiki-ingest`。Claude 读取图片并将其内容转为结构化 Markdown，然后进入标准摄入流程：
 
 ```bash
 wiki-input ~/screenshots/architecture-diagram.png --topic system-design
 wiki-input ~/photos/whiteboard-session.jpg --topic meetings
 ```
 
-**What Claude extracts from images:**
-- **Charts & graphs** — data series, axis labels, trends, and numerical values
-- **Diagrams & flowcharts** — nodes, edges, relationships, and flow direction
-- **Screenshots** — UI structure, visible text, and layout context
-- **Handwritten notes / whiteboards** — transcribed text and drawn structures
-- **Tables in images** — reconstructed as Markdown tables
-- **Mixed content** — documents photographed or scanned with both text and figures
-
-### Images Embedded in Documents
-
-When ingesting PDF, DOCX, or PPTX files that contain embedded images, the respective extraction tool captures all text content. Figures and diagrams within those files that are critical to understanding should be re-ingested as standalone images if the text extraction alone is insufficient.
-
-### Supported Image Formats
-
-| Format | Notes |
-|---|---|
-| `.png` | Lossless; ideal for screenshots, diagrams |
-| `.jpg` / `.jpeg` | Photos, scanned documents |
-| `.webp` | Web-optimized images |
-| `.gif` | First frame is analyzed (static content) |
-| `.bmp` | Uncompressed bitmap |
-
-### Multimodal Extraction Pipeline
-
-All image content follows the same Ingest pipeline as text documents — the image is simply converted to Markdown first:
-
-```
-Image File
-    │
-    ▼
-Claude Vision (Read tool)
-    │  Extracts: text, structure, data, relationships
-    ▼
-Markdown Description
-    │
-    ▼
-Standard Ingest Workflow (Steps 2–10)
-    │  sources/ entities/ concepts/ index/ overview/ log/
-    ▼
-Wiki Pages + Knowledge Graph
-```
+**Claude 从图片中提取的内容：**
+- **图表和数据图** — 数据系列、轴标签、趋势和数值
+- **Diagram 和流程图** — 节点、边、关系和流向
+- **截图** — UI 结构、可见文本和布局上下文
+- **手写笔记 / 白板** — 转录的文本和绘制的结构
+- **图片中的表格** — 重建为 Markdown 表格
+- **混合内容** — 同时包含文本和图的拍照/扫描文档
 
 ---
 
-## Quick Start
+## 参考
 
-```bash
-# 1. Set the wiki workspace
-wiki-config workspace ~/my-wiki
-
-# 2. Ingest the first document
-wiki-input ~/Downloads/paper.pdf --topic papers
-
-# 3. Query
-wiki-query: What is the core contribution of this paper?
-
-# 4. Build the knowledge graph
-wiki-graph
-```
-
----
-
-## References
-
-- [Anthropic Skills — Official Skills Repository](https://github.com/anthropics/skills)
-- [Andrej Karpathy — LLM Wiki concept](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
+- [Anthropic Skills — 官方 Skills 仓库](https://github.com/anthropics/skills)
+- [Andrej Karpathy — LLM Wiki 概念](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
 - [SamurAIGPT — llm-wiki-agent](https://github.com/SamurAIGPT/llm-wiki-agent)
