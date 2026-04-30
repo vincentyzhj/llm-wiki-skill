@@ -27,7 +27,7 @@
 - 每个操作必须追加到 `log.md`
 
 ### 来源标记
-- 综合 3+ 来源的页面，在段落末尾附加 `^[raw/articles/来源文件.md]` 标记
+- 综合 3+ 来源的页面，在段落末尾附加 `^[sources/来源slug]` 标记
 - 单来源页面中，frontmatter 的 `sources:` 字段已足够，无需段落标记
 
 ### 页面阈值
@@ -50,11 +50,11 @@
 ```yaml
 ---
 title: "页面标题"
-type: entity | concept | comparison | query | synthesis
+type: entity | concept | comparison | query
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 tags: [来自下方分类法]
-sources: [raw/articles/来源名.md]
+sources: [slug-1, slug-2]              # 来源页 slug 列表（不含路径前缀）
 ---
 ```
 

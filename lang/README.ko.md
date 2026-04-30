@@ -22,20 +22,28 @@ RAG와의 핵심 차이점: RAG는 원시 문서를 벡터 저장소에 넣고 �
 
 ```
 <wiki-root>/
-  raw/                  # 원시 문서 (절대 수정하지 않음)
-    <topic>/            # 주제별로 정리, 1단계 하위 디렉토리
-  wiki/
-    index.md            # 모든 페이지의 목차 (주제별 구분)
-    overview.md         # 모든 소스를 아우르는 living synthesis
-    log.md              # 추가 전용 작업 로그
-    sources/            # 각 원시 문서의 요약 페이지
-    entities/           # 인물 / 회사 / 프로젝트 / 제품
-    concepts/           # 개념 / 프레임워크 / 방법론
-    syntheses/          # 쿼리 답변 아카이브
-    archive/            # 아카이브된 오래된 페이지
-  graph/
-    graph.json          # 노드 + 엣지 데이터
-    graph.html          # vis.js 기반 자체 포함 시각화
+├── SCHEMA.md                    # 도메인 정의 + 태그 분류법 + 규칙
+├── index.md                     # 파티션별 콘텐츠 목차, 페이지당 한 줄 요약
+├── overview.md                  # 모든 소스를 아우르는 living synthesis
+├── log.md                       # 추가 전용 작업 로그 (500개 초과 시 자동 순환)
+│
+├── raw/                         # 불변 원시 소스
+│   ├── articles/                # 웹 기사, 클리핑
+│   ├── papers/                  # PDF, arxiv 논문
+│   ├── transcripts/             # 회의 노트, 인터뷰
+│   ├── assets/                  # 이미지, 다이어그램
+│   └── <custom-topic>/          # 사용자 정의 주제 디렉토리
+│
+├── sources/                     # 각 원시 문서의 요약 페이지
+├── entities/                    # 엔티티 페이지 (인물/회사/프로젝트/제품)
+├── concepts/                    # 개념 페이지 (개념/프레임워크/방법론)
+├── comparisons/                 # 비교 분석 페이지
+├── queries/                     # 가치 있는 쿼리 결과 아카이브
+├── archive/                     # 아카이브된 오래된 페이지
+│
+└── graph/
+    ├── graph.json               # 노드 + 엣지 데이터
+    └── graph.html               # vis.js 기반 자체 포함 시각화
 ```
 
 ---
@@ -62,16 +70,18 @@ RAG와의 핵심 차이점: RAG는 원시 문서를 벡터 저장소에 넣고 �
 
 문서를 수집할 때 LLM은 순서대로 실행합니다:
 
-1. 멀티모달 콘텐츠 추출 (PDF/DOCX/PPTX/XLSX/이미지 → Markdown)
-2. `wiki/sources/<slug>.md` 작성 (요약, 핵심 사항, 주요 인용)
-3. `wiki/index.md` 및 `wiki/overview.md` 업데이트
-4. `wiki/entities/` 및 `wiki/concepts/` 페이지 생성 또는 업데이트
-5. 기존 콘텐츠와의 모순 표시
-6. `wiki/log.md`에 작업 로그 추가
+1. `SCHEMA.md` 읽기 — 도메인 규칙과 태그 분류법 이해
+2. 멀티모달 콘텐츠 추출 (PDF/DOCX/PPTX/XLSX/이미지 → Markdown)
+3. `sources/<slug>.md` 작성 (요약, 핵심 사항, 주요 인용)
+4. `index.md` 및 `overview.md` 업데이트
+5. `entities/` 및 `concepts/` 페이지 생성 또는 업데이트
+6. 소스에 비교 정보가 포함된 경우 `comparisons/` 페이지 생성 또는 업데이트
+7. 기존 콘텐츠와의 모순 표시
+8. `log.md`에 작업 로그 추가
 
 ### 쿼리 (Query)
 
-`wiki/index.md`를 읽어 관련 페이지를 식별하고, `[[PageName]]` 형식의 인라인 참조로 답변을 합성합니다. 선택적으로 답변을 `wiki/syntheses/<slug>.md`로 아카이브할 수 있습니다.
+`index.md`를 읽어 관련 페이지를 식별하고, `[[PageName]]` 형식의 인라인 참조로 답변을 합성합니다. 실질적인 답변은 `queries/<slug>.md`로 아카이브할 수 있습니다.
 
 ### 지식 그래프 (Graph)
 

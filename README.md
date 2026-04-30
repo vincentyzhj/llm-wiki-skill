@@ -83,7 +83,7 @@ Layer 1 — raw/ 来源     不可变的原始文档（数据层）
 
 1. 读取 `SCHEMA.md` 理解领域约定和标签分类法
 2. 多模态内容提取（PDF/DOCX/PPTX/XLSX/图片 → Markdown）
-3. 写入 `wiki/sources/<slug>.md`（摘要、要点、关键引用）
+3. 写入 `sources/<slug>.md`（摘要、要点、关键引用）
 4. 更新 `index.md` 和 `overview.md`
 5. 创建或更新 `entities/`、`concepts/` 页面
 6. 如来源包含对比信息，创建或更新 `comparisons/` 页面
@@ -240,14 +240,12 @@ wiki-lint
 │   ├── transcripts/
 │   ├── assets/
 │   └── inbox/
+├── sources/
 ├── entities/
 ├── concepts/
 ├── comparisons/
 ├── queries/
-├── wiki/
-│   ├── sources/
-│   ├── syntheses/
-│   └── archive/
+├── archive/
 └── graph/
 ```
 

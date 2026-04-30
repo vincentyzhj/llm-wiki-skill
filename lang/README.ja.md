@@ -22,20 +22,28 @@ RAG との根本的な違い：RAG は生ドキュメントをベクタースト
 
 ```
 <wiki-root>/
-  raw/                  # 生ドキュメント（絶対に変更しない）
-    <topic>/            # トピック別に整理、1 段階サブディレクトリ
-  wiki/
-    index.md            # 全ページの目次（トピック別に区分）
-    overview.md         # 全ソースを横断する living synthesis
-    log.md              # 追記専用の操作ログ
-    sources/            # 各生ドキュメントのサマリーページ
-    entities/           # 人物 / 企業 / プロジェクト / 製品
-    concepts/           # 概念 / フレームワーク / 方法論
-    syntheses/          # クエリ回答のアーカイブ
-    archive/            # アーカイブされた古いページ
-  graph/
-    graph.json          # ノード + エッジデータ
-    graph.html          # vis.js ベースの自己完結型ビジュアライゼーション
+├── SCHEMA.md                    # 領域定義 + タグ分類法 + 規約
+├── index.md                     # 全ページの目次（トピック別に区分）
+├── overview.md                  # 全ソースを横断する living synthesis
+├── log.md                       # 追記専用の操作ログ（500 件超で自動ローテーション）
+│
+├── raw/                         # 生ドキュメント（絶対に変更しない）
+│   ├── articles/                # ウェブ記事、クリップ
+│   ├── papers/                  # PDF、arxiv 論文
+│   ├── transcripts/             # 会議メモ、インタビュー
+│   ├── assets/                  # 画像、図表
+│   └── inbox/                   # 未分類の新規ドキュメント
+│
+├── sources/                     # 各生ドキュメントのサマリーページ
+├── entities/                    # 人物 / 企業 / プロジェクト / 製品
+├── concepts/                    # 概念 / フレームワーク / 方法論
+├── comparisons/                 # 比較分析ページ
+├── queries/                     # クエリ回答のアーカイブ
+├── archive/                     # アーカイブされた古いページ
+│
+└── graph/
+    ├── graph.json               # ノード + エッジデータ
+    └── graph.html               # vis.js ベースの自己完結型ビジュアライゼーション
 ```
 
 ---
@@ -62,16 +70,18 @@ RAG との根本的な違い：RAG は生ドキュメントをベクタースト
 
 ドキュメントを取り込む際、LLM は以下を順番に実行します：
 
-1. マルチモーダルコンテンツ抽出（PDF/DOCX/PPTX/XLSX/画像 → Markdown）
-2. `wiki/sources/<slug>.md` の書き込み（サマリー、要点、重要引用）
-3. `wiki/index.md` と `wiki/overview.md` の更新
-4. `wiki/entities/` と `wiki/concepts/` ページの作成または更新
-5. 既存コンテンツとの矛盾のフラグ設定
-6. `wiki/log.md` への操作ログの追記
+1. `SCHEMA.md` を読み取り、領域規約とタグ分類法を理解
+2. マルチモーダルコンテンツ抽出（PDF/DOCX/PPTX/XLSX/画像 → Markdown）
+3. `sources/<slug>.md` の書き込み（サマリー、要点、重要引用）
+4. `index.md` と `overview.md` の更新
+5. `entities/` と `concepts/` ページの作成または更新
+6. ソースに比較情報が含まれる場合、`comparisons/` ページの作成または更新
+7. 既存コンテンツとの矛盾のフラグ設定
+8. `log.md` への操作ログの追記
 
 ### クエリ（Query）
 
-`wiki/index.md` を読み取って関連ページを特定し、`[[PageName]]` 形式のインライン参照で回答を合成します。オプションで回答を `wiki/syntheses/<slug>.md` としてアーカイブできます。
+`index.md` を読み取って関連ページを特定し、`[[PageName]]` 形式のインライン参照で回答を合成します。実質的な回答は `queries/<slug>.md` としてアーカイブできます。
 
 ### 知識グラフ（Graph）
 

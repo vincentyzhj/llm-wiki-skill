@@ -22,20 +22,28 @@
 
 ```
 <wiki-root>/
-  raw/                  # 原始文档（永远不修改）
-    <topic>/            # 按主题组织，一级子目录
-  wiki/
-    index.md            # 所有页面的目录（按主题分区）
-    overview.md         # 跨来源的 living synthesis
-    log.md              # 只追加的操作日志
-    sources/            # 每份原始文档的摘要页
-    entities/           # 人物 / 公司 / 项目 / 产品
-    concepts/           # 概念 / 框架 / 方法论
-    syntheses/          # 查询答案存档
-    archive/            # 归档的过时页面
-  graph/
-    graph.json          # 节点 + 边数据
-    graph.html          # 基于 vis.js 的自包含可视化
+├── SCHEMA.md                    # 领域定义 + 标签分类法 + 约定
+├── index.md                     # 分区内容目录，每页一行摘要
+├── overview.md                  # 跨来源动态合成摘要
+├── log.md                       # 按时间追加型操作日志
+│
+├── raw/                         # 不可变原始来源
+│   ├── articles/                # 网页文章、剪报
+│   ├── papers/                  # PDF、arxiv 论文
+│   ├── transcripts/             # 会议笔记、访谈
+│   ├── assets/                  # 图片、图表
+│   └── inbox/                   # 默认归档
+│
+├── sources/                     # 每个原始文档的摘要页
+├── entities/                    # 实体页（人物/公司/项目/产品）
+├── concepts/                    # 概念页（概念/框架/方法论）
+├── comparisons/                 # 对比分析页
+├── queries/                     # 有价值的查询结果归档
+├── archive/                     # 归档的过期页面
+│
+└── graph/
+    ├── graph.json               # 节点 + 边数据
+    └── graph.html               # 基于 vis.js 的独立可视化
 ```
 
 ---
@@ -62,16 +70,18 @@
 
 摄入一份文档时，LLM 会依次执行：
 
-1. 多模态内容提取（PDF/DOCX/PPTX/XLSX/图片 → Markdown）
-2. 写入 `wiki/sources/<slug>.md`（摘要、要点、关键引用）
-3. 更新 `wiki/index.md` 和 `wiki/overview.md`
-4. 创建或更新 `wiki/entities/` 和 `wiki/concepts/` 页面
-5. 标记与已有内容的矛盾
-6. 追加操作日志到 `wiki/log.md`
+1. 读取 `SCHEMA.md` 理解领域约定和标签分类法
+2. 多模态内容提取（PDF/DOCX/PPTX/XLSX/图片 → Markdown）
+3. 写入 `sources/<slug>.md`（摘要、要点、关键引用）
+4. 更新 `index.md` 和 `overview.md`
+5. 创建或更新 `entities/` 和 `concepts/` 页面
+6. 如来源包含对比信息，创建或更新 `comparisons/` 页面
+7. 标记与已有内容的矛盾
+8. 追加操作日志到 `log.md`
 
 ### 查询（Query）
 
-读取 `wiki/index.md` 识别相关页面，综合答案并以 `[[PageName]]` 格式内联引用。可选将答案存为 `wiki/syntheses/<slug>.md` 归档备查。
+读取 `index.md` 识别相关页面，综合答案并以 `[[PageName]]` 格式内联引用。可选将答案存为 `queries/<slug>.md` 归档备查。
 
 ### 知识图谱（Graph）
 

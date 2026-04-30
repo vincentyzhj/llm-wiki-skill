@@ -86,7 +86,7 @@ contradictions: [其他页面名]
 title: "A vs B 对比"
 type: comparison
 tags: [comparison, 相关标签]
-sources: [raw/articles/来源1.md, raw/articles/来源2.md]
+sources: [slug-1, slug-2]             # 来源页 slug 列表
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 confidence: high | medium | low
@@ -149,7 +149,7 @@ confidence: high | medium | low
 - [[transformer-attention-mechanism]] — Transformer 注意力机制详解
 ```
 
-**扩展规则**：当任何分区超过 50 个条目时，按首字母或子领域拆分子分区。当索引总条目超过 200 时，创建 `_meta/topic-map.md` 按主题分组页面以便更快导航。
+**扩展规则**：当任何分区超过 50 个条目时，按首字母或子领域拆分子分区。当索引总条目超过 200 时，创建 `topic-map.md` 按主题分组页面以便更快导航。
 
 ---
 

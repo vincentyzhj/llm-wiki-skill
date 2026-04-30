@@ -40,13 +40,11 @@ except ImportError:
     HAS_NX = False
 
 # ── Constants ──────────────────────────────────────────────────────────────────
-WIKI_DIR = Path("wiki")
 GRAPH_DIR = Path("graph")
 CACHE_FILE = GRAPH_DIR / ".graph_cache.json"
 GRAPH_JSON = GRAPH_DIR / "graph.json"
 GRAPH_HTML = GRAPH_DIR / "graph.html"
 LOG_FILE   = Path("log.md")
-LOG_FILE_LEGACY = WIKI_DIR / "log.md"
 TEMPLATE_FILE = Path(__file__).parent.parent / "templates" / "wiki-graph-template.html"
 
 PAGE_DIRS = [
@@ -55,6 +53,7 @@ PAGE_DIRS = [
     Path("concepts"),
     Path("comparisons"),
     Path("queries"),
+    Path("archive"),
 ]
 
 NODE_COLORS = {
@@ -98,9 +97,8 @@ def parse_frontmatter(content: str) -> dict:
 def collect_pages() -> list[Path]:
     """Return all .md page paths from PAGE_DIRS (excluding index/log/overview/lint-report)
 
-    Deduplicates by stem: if the same filename exists in both a root-level
-    directory (e.g. entities/OpenAI.md) and a wiki/ subdirectory
-    (e.g. wiki/entities/OpenAI.md), only the root-level version is kept.
+    Deduplicates by stem: if the same filename stem exists in multiple directories,
+    only the first occurrence is kept.
     """
     skip = {"index.md", "log.md", "overview.md", "lint-report.md"}
     seen_stems = set()
@@ -332,8 +330,8 @@ def main():
     new_cache["inferred_edges"] = inferred_edges
     CACHE_FILE.write_text(json.dumps(new_cache, indent=2))
 
-    # Append log — prefer root-level log.md, fall back to wiki/log.md for legacy wikis
-    log_path = LOG_FILE if LOG_FILE.exists() else LOG_FILE_LEGACY if LOG_FILE_LEGACY.exists() else LOG_FILE
+    # Append log
+    log_path = LOG_FILE
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_entry = f"\n## [{date.today()}] graph | Knowledge graph rebuilt — {len(nodes_out)} nodes, {len(all_edges)} edges\n"
     with open(log_path, "a", encoding="utf-8") as f:

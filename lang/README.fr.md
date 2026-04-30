@@ -22,20 +22,28 @@ La différence fondamentale avec RAG : RAG jette les documents bruts dans un mag
 
 ```
 <wiki-root>/
-  raw/                  # Documents bruts (jamais modifiés)
-    <topic>/            # Organisé par thème, sous-répertoires à un niveau
-  wiki/
-    index.md            # Table des matières de toutes les pages (partitionnée par thème)
-    overview.md         # Synthèse vivante de toutes les sources
-    log.md              # Journal d'opérations en ajout uniquement
-    sources/            # Page de résumé pour chaque document brut
-    entities/           # Personnes / entreprises / projets / produits
-    concepts/           # Concepts / cadres / méthodologies
-    syntheses/          # Réponses aux requêtes archivées
-    archive/            # Pages obsolètes archivées
-  graph/
-    graph.json          # Données de nœuds + arêtes
-    graph.html          # Visualisation autonome basée sur vis.js
+├── SCHEMA.md                    # Définition du domaine + taxonomie des tags + conventions
+├── index.md                     # Table des matières de toutes les pages (partitionnée par thème)
+├── overview.md                  # Synthèse vivante de toutes les sources
+├── log.md                       # Journal d'opérations en ajout uniquement (rotation auto >500 entrées)
+│
+├── raw/                         # Documents bruts (jamais modifiés)
+│   ├── articles/                # Articles web, coupures de presse
+│   ├── papers/                  # PDF, articles arxiv
+│   ├── transcripts/             # Notes de réunion, entretiens
+│   ├── assets/                  # Images, diagrammes
+│   └── <custom-topic>/          # Répertoires de thèmes personnalisés
+│
+├── sources/                     # Page de résumé pour chaque document brut
+├── entities/                    # Entités (personnes / entreprises / projets / produits)
+├── concepts/                    # Concepts (cadres / méthodologies / idées)
+├── comparisons/                 # Pages d'analyse comparative
+├── queries/                     # Réponses aux requêtes archivées
+├── archive/                     # Pages obsolètes archivées
+│
+└── graph/
+    ├── graph.json               # Données de nœuds + arêtes
+    └── graph.html               # Visualisation autonome basée sur vis.js
 ```
 
 ---
@@ -62,16 +70,18 @@ La différence fondamentale avec RAG : RAG jette les documents bruts dans un mag
 
 Lors de l'ingestion d'un document, le LLM exécute séquentiellement :
 
-1. Extraction de contenu multimodal (PDF/DOCX/PPTX/XLSX/images → Markdown)
-2. Écriture de `wiki/sources/<slug>.md` (résumé, points clés, citations importantes)
-3. Mise à jour de `wiki/index.md` et `wiki/overview.md`
-4. Création ou mise à jour des pages `wiki/entities/` et `wiki/concepts/`
-5. Signalement des contradictions avec le contenu existant
-6. Ajout du journal d'opérations à `wiki/log.md`
+1. Lecture de `SCHEMA.md` pour comprendre les conventions du domaine et la taxonomie des tags
+2. Extraction de contenu multimodal (PDF/DOCX/PPTX/XLSX/images → Markdown)
+3. Écriture de `sources/<slug>.md` (résumé, points clés, citations importantes)
+4. Mise à jour de `index.md` et `overview.md`
+5. Création ou mise à jour des pages `entities/` et `concepts/`
+6. Création ou mise à jour des pages `comparisons/` si la source contient des informations comparatives
+7. Signalement des contradictions avec le contenu existant
+8. Ajout du journal d'opérations à `log.md`
 
 ### Requête
 
-Lit `wiki/index.md` pour identifier les pages pertinentes, synthétise une réponse avec des références en ligne au format `[[PageName]]`. Optionnellement, archive la réponse sous `wiki/syntheses/<slug>.md`.
+Lit `index.md` pour identifier les pages pertinentes, synthétise une réponse avec des références en ligne au format `[[PageName]]`. Les réponses substantielles peuvent être archivées sous `queries/<slug>.md`.
 
 ### Graphe de Connaissances
 

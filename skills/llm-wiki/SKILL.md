@@ -521,7 +521,7 @@ python <skill-root>/scripts/build_graph.py [--skip-infer] [--open]
 
 ### 方法 B — 纯 Claude 手动构建（无 Python 环境时）
 
-1. 使用 `Grep` 在 `entities/`、`concepts/`、`comparisons/`、`queries/`、`wiki/` 下查找所有 `[[wikilinks]]`
+1. 使用 `Grep` 在 `entities/`、`concepts/`、`comparisons/`、`queries/`、`sources/` 下查找所有 `[[wikilinks]]`
 2. 构建节点列表：每个 Wiki 页面是一个节点，类型来自 frontmatter
 3. 构建边列表：显式 wikilink 标记为 `EXTRACTED`，语义推断边（置信度 ≥ 0.5）标记为 `INFERRED`（带 0-1 置信度），置信度 < 0.5 的推断边被过滤
 4. 写入 `graph/graph.json`（格式见下）

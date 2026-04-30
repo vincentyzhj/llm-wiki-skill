@@ -22,20 +22,28 @@
 
 ```
 <wiki-root>/
-  raw/                  # 原始文件（永遠不修改）
-    <topic>/            # 按主題組織，一級子目錄
-  wiki/
-    index.md            # 所有頁面的目錄（按主題分區）
-    overview.md         # 跨來源的 living synthesis
-    log.md              # 僅追加的操作日誌
-    sources/            # 每份原始文件的摘要頁
-    entities/           # 人物 / 公司 / 專案 / 產品
-    concepts/           # 概念 / 框架 / 方法論
-    syntheses/          # 查詢答案存檔
-    archive/            # 歸檔的過時頁面
-  graph/
-    graph.json          # 節點 + 邊資料
-    graph.html          # 基於 vis.js 的自包含視覺化
+├── SCHEMA.md                    # 題域定義 + 標籤分類法 + 約定
+├── index.md                     # 分區內容目錄
+├── overview.md                  # 跨來源動態合成摘要
+├── log.md                       # 按時間追加型操作日誌
+│
+├── raw/                         # 不可變原始來源
+│   ├── articles/
+│   ├── papers/
+│   ├── transcripts/
+│   ├── assets/
+│   └── inbox/
+│
+├── sources/                     # 每個原始文件的摘要頁
+├── entities/                    # 實體頁
+├── concepts/                    # 概念頁
+├── comparisons/                 # 對比分析頁
+├── queries/                     # 查詢結果歸檔
+├── archive/
+│
+└── graph/
+    ├── graph.json
+    └── graph.html
 ```
 
 ---
@@ -63,15 +71,15 @@
 攝入一份文件時，LLM 會依序執行：
 
 1. 多模態內容提取（PDF/DOCX/PPTX/XLSX/圖片 → Markdown）
-2. 寫入 `wiki/sources/<slug>.md`（摘要、要點、關鍵引用）
-3. 更新 `wiki/index.md` 和 `wiki/overview.md`
-4. 建立或更新 `wiki/entities/` 和 `wiki/concepts/` 頁面
+2. 寫入 `sources/<slug>.md`（摘要、要點、關鍵引用）
+3. 更新 `index.md` 和 `overview.md`
+4. 建立或更新 `entities/` 和 `concepts/` 頁面
 5. 標記與已有內容的矛盾
-6. 追加操作日誌到 `wiki/log.md`
+6. 追加操作日誌到 `log.md`
 
 ### 查詢（Query）
 
-讀取 `wiki/index.md` 識別相關頁面，綜合答案並以 `[[PageName]]` 格式內聯引用。可選將答案存為 `wiki/syntheses/<slug>.md` 歸檔備查。
+讀取 `index.md` 識別相關頁面，綜合答案並以 `[[PageName]]` 格式內聯引用。可選將答案存為 `queries/<slug>.md` 歸檔備查。
 
 ### 知識圖譜（Graph）
 

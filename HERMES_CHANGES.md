@@ -107,9 +107,9 @@ Hermes 版本在原版 `llm-wiki-skill` 基础上，融合了 Hermes Agent 的 `
 
 | 改动项 | 原版 | Hermes 版 |
 |--------|------|-----------|
-| 页面扫描 | 仅扫描 `wiki/` 目录 | 扫描 `PAGE_DIRS` 列表，兼容新旧两种目录结构 |
-| 目录列表 | `WIKI_DIR` 单一目录 | `entities/`、`concepts/`、`comparisons/`、`queries/`（根目录）+ `wiki/sources/`、`wiki/syntheses/`、`wiki/entities/`、`wiki/concepts/`（兼容旧版） |
-| 链接解析 | 搜索 `wiki/` 子目录 | 同时搜索根级和 `wiki/` 子目录 |
+| 页面扫描 | 仅扫描 `wiki/` 目录 | 扫描 `PAGE_DIRS` 列表（根级目录） |
+| 目录列表 | `WIKI_DIR` 单一目录 | `sources/`、`entities/`、`concepts/`、`comparisons/`、`queries/`（根目录） |
+| 链接解析 | 搜索 `wiki/` 子目录 | 搜索根级目录 |
 | 日志路径 | `wiki/log.md` | `log.md`（根级） |
 | 节点颜色 | 4 种 | 6 种（+comparison 红色 `#E74C3C`、query 青色 `#1ABC9C`） |
 
@@ -137,32 +137,49 @@ Hermes 版本在原版 `llm-wiki-skill` 基础上，融合了 Hermes Agent 的 `
 
 ## 兼容性说明
 
-### 向后兼容
+> ⚠️ **Hermes 版已完全统一目录结构，不向后兼容原版 `wiki/` 子目录。**
 
-| 原版功能 | Hermes 版状态 |
-|----------|-------------|
-| `wiki-config` 命令系统 | ✅ 完全保留 |
-| `wiki-input` 远程/OSS 支持 | ✅ 完全保留 |
-| 知识图谱（graph.html） | ✅ 完全保留，兼容新旧目录 |
-| 多模态提取（PDF/DOCX/PPTX/XLSX/图片） | ✅ 完全保留 |
-| 中断恢复机制 | ✅ 完全保留 |
-| 中文触发词 | ✅ 完全保留 |
-| `wiki/` 子目录结构 | ✅ 兼容，新页面优先写入根级目录 |
+### 迁移要求
 
-### 目录迁移
+使用 Hermes 版前，需将原版数据迁移到新结构：
 
-已有原版 Wiki 数据**无需迁移**。Hermes 版的 `build_graph.py` 同时扫描 `entities/`（新）和 `wiki/entities/`（旧）目录，两套结构可并存。
+| 原版路径 | Hermes 版路径 |
+|----------|---------------|
+| `wiki/sources/*.md` | `sources/` |
+| `wiki/entities/*.md` | `entities/` |
+| `wiki/concepts/*.md` | `concepts/` |
+| `wiki/syntheses/*.md` | `queries/` |
+| `wiki/index.md` | `index.md`（根级） |
+| `wiki/overview.md` | `overview.md`（根级） |
+| `wiki/log.md` | `log.md`（根级） |
 
-如需完全迁移到新结构：
-1. 将 `wiki/entities/*.md` → `entities/`
-2. 将 `wiki/concepts/*.md` → `concepts/`
-3. 将 `wiki/syntheses/*.md` → `queries/`
-4. 将 `wiki/index.md`、`overview.md`、`log.md` → 移到根级
-5. 创建 `SCHEMA.md`、`comparisons/` 目录
+并新增：
+- `SCHEMA.md`（根级）
+- `comparisons/` 目录
+- `raw/` 目录结构（含固定分类 + 自定义 topic）
+- `archive/` 目录
 
-### Frontmatter 兼容
+### 迁移脚本示例
 
-原版 frontmatter 中的 `last_updated` 字段会被 Hermes 版的 `updated` 字段替代，但两者可共存。`build_graph.py` 通过 frontmatter 中的 `type` 字段识别页面类型，新增 `comparison` 和 `query` 类型。
+```bash
+# 假设原版 Wiki 在 ~/old-wiki/wiki/
+mkdir ~/my-wiki
+cp ~/old-wiki/wiki/index.md ~/my-wiki/
+cp ~/old-wiki/wiki/overview.md ~/my-wiki/
+cp ~/old-wiki/wiki/log.md ~/my-wiki/
+
+mkdir ~/my-wiki/sources && cp ~/old-wiki/wiki/sources/*.md ~/my-wiki/sources/
+mkdir ~/my-wiki/entities && cp ~/old-wiki/wiki/entities/*.md ~/my-wiki/entities/
+mkdir ~/my-wiki/concepts && cp ~/old-wiki/wiki/concepts/*.md ~/my-wiki/concepts/
+mkdir ~/my-wiki/queries && cp ~/old-wiki/wiki/syntheses/*.md ~/my-wiki/queries/
+
+mkdir ~/my-wiki/comparisons
+mkdir ~/my-wiki/archive
+mkdir ~/my-wiki/raw/articles ~/my-wiki/raw/papers ~/my-wiki/raw/transcripts ~/my-wiki/raw/assets ~/my-wiki/raw/inbox
+mkdir ~/my-wiki/graph
+
+# 编辑 SCHEMA.md 定义领域和标签分类法
+```
 
 ---
 
