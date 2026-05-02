@@ -7,7 +7,7 @@ description: >
   激活触发词：wiki-ingest、wiki 摄入、build knowledge graph、wiki-graph、wiki-query、
   wiki-lint、wiki 检查、add document to wiki、knowledge base construction、
   wiki-config、wiki configuration、set wiki path、wiki-input、wiki 输入、
-  创建 wiki、构建知识库、wiki lint、wiki 健康检查。
+  创建 wiki、构建知识库、wiki lint、wiki 健康检查、存入 wiki、放进 wiki、收录进 wiki。
 triggers:
   - wiki-ingest
   - wiki 摄入
@@ -20,6 +20,11 @@ triggers:
   - wiki 健康检查
   - 知识库构建
   - 把文档加入 wiki
+  - 存入 wiki
+  - 放进 wiki
+  - 收录进 wiki
+  - 保存到 wiki
+  - 添加到 wiki
   - 创建 wiki
   - wiki-config
   - wiki workspace
