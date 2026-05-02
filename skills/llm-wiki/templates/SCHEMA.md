@@ -183,7 +183,8 @@ SHA256 计算范围：frontmatter 之后的正文内容，不包含 frontmatter 
 │   ├── articles/                # 网页文章
 │   ├── papers/                  # PDF/论文
 │   ├── transcripts/             # 会议/访谈
-│   └── assets/                  # 图片/图表
+│   ├── assets/                  # 图片/图表
+│   └── inbox/                   # 默认归档
 │
 ├── sources/                     # 每个原始文档的摘要页
 ├── entities/                    # 实体页

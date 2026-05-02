@@ -62,7 +62,6 @@ NODE_COLORS = {
     "concept":    "#5BA85A",
     "comparison": "#E74C3C",
     "query":      "#1ABC9C",
-    "synthesis":  "#9B59B6",
 }
 
 WIKILINK_RE = re.compile(r"\[\[([^\]|#]+?)(?:\|[^\]]+?)?\]\]")

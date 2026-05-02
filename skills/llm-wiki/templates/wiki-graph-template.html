@@ -136,16 +136,20 @@
       <span class="legend-label">Source</span>
     </div>
     <div class="legend-row">
-      <span class="legend-dot" style="--c:#E8943A"></span>
+      <span class="legend-dot" style="--c:#E8A838"></span>
       <span class="legend-label">Entity</span>
     </div>
     <div class="legend-row">
-      <span class="legend-dot" style="--c:#3DBE7A"></span>
+      <span class="legend-dot" style="--c:#5BA85A"></span>
       <span class="legend-label">Concept</span>
     </div>
     <div class="legend-row">
-      <span class="legend-dot" style="--c:#A855F7"></span>
-      <span class="legend-label">Synthesis</span>
+      <span class="legend-dot" style="--c:#E74C3C"></span>
+      <span class="legend-label">Comparison</span>
+    </div>
+    <div class="legend-row">
+      <span class="legend-dot" style="--c:#1ABC9C"></span>
+      <span class="legend-label">Query</span>
     </div>
     <div class="legend-sep"></div>
     <div class="legend-edge">
@@ -172,18 +176,20 @@
     const DATA = /* GRAPH_JSON_PLACEHOLDER */;
 
     const PALETTE = {
-      source:    { bg: "#1a3a5c", border: "#4A90D9", glow: "#4A90D9" },
-      entity:    { bg: "#3d2a0a", border: "#E8943A", glow: "#E8943A" },
-      concept:   { bg: "#0d3320", border: "#3DBE7A", glow: "#3DBE7A" },
-      synthesis: { bg: "#2a1040", border: "#A855F7", glow: "#A855F7" },
+      source:     { bg: "#1a3a5c", border: "#4A90D9", glow: "#4A90D9" },
+      entity:     { bg: "#3d2a0a", border: "#E8A838", glow: "#E8A838" },
+      concept:    { bg: "#0d3320", border: "#5BA85A", glow: "#5BA85A" },
+      comparison: { bg: "#3d0a0a", border: "#E74C3C", glow: "#E74C3C" },
+      query:      { bg: "#0a2d2d", border: "#1ABC9C", glow: "#1ABC9C" },
     };
     const DEFAULT_P = { bg: "#1a2030", border: "#607090", glow: "#607090" };
 
     const TYPE_BADGE = {
-      source:    { bg: "rgba(74,144,217,0.2)",  color: "#4A90D9"  },
-      entity:    { bg: "rgba(232,148,58,0.2)",  color: "#E8943A"  },
-      concept:   { bg: "rgba(61,190,122,0.2)",  color: "#3DBE7A"  },
-      synthesis: { bg: "rgba(168,85,247,0.2)",  color: "#A855F7"  },
+      source:     { bg: "rgba(74,144,217,0.2)",  color: "#4A90D9"  },
+      entity:     { bg: "rgba(232,168,56,0.2)",  color: "#E8A838"  },
+      concept:    { bg: "rgba(91,168,90,0.2)",   color: "#5BA85A"  },
+      comparison: { bg: "rgba(231,76,60,0.2)",   color: "#E74C3C"  },
+      query:      { bg: "rgba(26,188,156,0.2)",  color: "#1ABC9C"  },
     };
 
     /* degree map */

@@ -130,11 +130,11 @@ read log.md（最后 30 行）
 ```yaml
 ---
 title: "页面标题"
-type: source | entity | concept | comparison | query | synthesis
+type: source | entity | concept | comparison | query
 created: YYYY-MM-DD              # 创建日期
 updated: YYYY-MM-DD              # 最后更新日期
 tags: [来自 SCHEMA.md 分类法]
-sources: [raw/articles/来源名.md]
+sources: [slug-1, slug-2]              # 来源页 slug 列表
 
 # 来源页专用字段：
 source_file: raw/<topic>/<文件名>
@@ -212,7 +212,7 @@ contradictions: [其他页面名]      # 与之冲突的页面
 - 更新页面时必须 bump `updated` 日期
 - 新页面必须添加到 index.md 的正确分区
 - 每个操作必须追加到 log.md
-- **来源标记**：综合 3+ 来源的页面，在段落末尾附加 `^[raw/articles/来源文件.md]`
+- **来源标记**：综合 3+ 来源的页面，在段落末尾附加 `^[sources/来源slug]`
 
 ## Frontmatter
 （见 SKILL.md 的 Frontmatter 章节）
@@ -400,6 +400,8 @@ contradictions: [其他页面名]      # 与之冲突的页面
 
 > **批量摄入优化**：当同时摄入多个来源时，先读取所有来源，一次性识别所有实体和概念，一次性搜索现有页面，然后一次性创建/更新所有页面，最后统一更新 index.md 和写入一条批量日志。
 
+> **log.md patch 陷阱**：自动化进程（如图谱重建、定时任务）可能在 `log.md` 末尾产生完全相同的追加行。`patch` 工具以 unique match 方式工作，当 old_string 匹配多行时会失败（"Found 2 matches"）。解决方案：先用 `tail -20 log.md` 查看末尾，构造 old_string 时包含 2-3 行上下文确保唯一匹配。
+
 ### 来源页格式
 
 ```markdown
@@ -509,7 +511,7 @@ cd <WIKI_ROOT>
 python <skill-root>/scripts/build_graph.py [--skip-infer] [--open]
 ```
 
-> **注意**：脚本使用相对路径，必须在 WIKI_ROOT 目录执行（包含 `entities/`、`concepts/`、`graph/` 等子目录的目录）。
+> **注意**：脚本使用相对路径，必须在 **WIKI_ROOT 目录**执行（包含 `sources/`、`concepts/`、`entities/`、`graph/` 等子目录的目录）。
 
 参数说明：
 - `--skip-infer`：跳过 AI 语义推断，仅提取显式 wikilinks（快速模式，无需 `ANTHROPIC_API_KEY`）
@@ -574,7 +576,6 @@ python <skill-root>/scripts/build_graph.py [--skip-infer] [--open]
 | concept | `#5BA85A`（绿色） |
 | comparison | `#E74C3C`（红色） |
 | query | `#1ABC9C`（青色） |
-| synthesis | `#9B59B6`（紫色） |
 
 ---
 
@@ -632,6 +633,16 @@ python <skill-root>/scripts/build_graph.py [--skip-infer] [--open]
 ---
 
 ## 多模态提取详细规格
+
+### URL 来源（网页文章）
+
+当用户提供的来源是 URL（如微信公众号、博客链接），**先抓取内容再进入标准提取流程**：
+
+1. 将 URL 对应的 HTML 内容保存为 `raw/articles/<slug>.md`（提取后的纯文本）
+2. 同时在 `raw/articles/` 下保留原始 HTML 供回溯（命名 `<slug>.html`）
+3. 然后对 `.md` 文件执行标准摄入流程
+
+**微信公众号文章需要特殊处理**（反爬机制会拦截简单 curl）。详见 [references/wechat-mp-article-fetch.md](references/wechat-mp-article-fetch.md)。
 
 ### PDF 提取
 
