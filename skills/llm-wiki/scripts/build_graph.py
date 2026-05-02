@@ -169,8 +169,16 @@ def build_topic_edges(nodes_map: dict, extracted_edges: list[dict]) -> list[dict
             dir_groups.setdefault(dir_name, []).append(pid)
 
     for dir_name, pids in dir_groups.items():
+        if len(pids) <= 1:
+            continue
+        max_edges = min(10, len(pids) * 2)
+        count = 0
         for i in range(len(pids)):
+            if count >= max_edges:
+                break
             for j in range(i + 1, len(pids)):
+                if count >= max_edges:
+                    break
                 pair = tuple(sorted([pids[i], pids[j]]))
                 if pair not in existing_pairs:
                     topic_edges.append({
@@ -180,6 +188,7 @@ def build_topic_edges(nodes_map: dict, extracted_edges: list[dict]) -> list[dict
                         "label": f"same {dir_name}",
                     })
                     existing_pairs.add(pair)
+                    count += 1
 
     tag_groups: dict[str, list[str]] = {}
     for pid, node in nodes_map.items():
@@ -187,10 +196,10 @@ def build_topic_edges(nodes_map: dict, extracted_edges: list[dict]) -> list[dict
             tag_groups.setdefault(tag, []).append(pid)
 
     for tag, pids in tag_groups.items():
-        if len(pids) < 2:
+        if len(pids) < 2 or len(pids) > 10:
             continue
         for i in range(len(pids)):
-            for j in range(i + 1, len(pids)):
+            for j in range(i + 1, min(i + 4, len(pids))):
                 pair = tuple(sorted([pids[i], pids[j]]))
                 if pair not in existing_pairs:
                     topic_edges.append({
