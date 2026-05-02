@@ -2,16 +2,18 @@
 """
 build_graph.py — LLM Wiki Knowledge Graph Builder
 
-Two-pass scan:
-  Pass 1: Parse all [[wikilinks]] in wiki pages → EXTRACTED edges
-  Pass 2: Call Claude to infer implicit semantic relations → INFERRED edges (with confidence)
+Three-layer edge architecture:
+  Layer 1: Parse all [[wikilinks]] in wiki pages → EXTRACTED edges
+  Layer 2: Same-directory co-occurrence + shared tags → TOPIC edges
+  Layer 3: Call Claude to infer implicit semantic relations → INFERRED edges
 
 Supports SHA256 caching, only processes changed pages.
 Output: graph/graph.json + graph/graph.html (vis.js self-contained)
 
 Usage:
-  python build_graph.py              # Full build
-  python build_graph.py --skip-infer # Skip AI inference (fast mode)
+  python build_graph.py              # EXTRACTED + TOPIC (default, no API needed)
+  python build_graph.py --infer      # + INFERRED (requires ANTHROPIC_API_KEY)
+  python build_graph.py --no-topic   # EXTRACTED only (legacy mode)
   python build_graph.py --open       # Open browser after build
 """
 
@@ -25,7 +27,6 @@ import webbrowser
 from datetime import date
 from pathlib import Path
 
-# ── Optional Dependencies ───────────────────────────────────────────────────────
 try:
     import anthropic
     HAS_ANTHROPIC = True
@@ -39,7 +40,6 @@ try:
 except ImportError:
     HAS_NX = False
 
-# ── Constants ──────────────────────────────────────────────────────────────────
 GRAPH_DIR = Path("graph")
 CACHE_FILE = GRAPH_DIR / ".graph_cache.json"
 GRAPH_JSON = GRAPH_DIR / "graph.json"
@@ -68,9 +68,8 @@ WIKILINK_RE = re.compile(r"\[\[([^\]|#]+?)(?:\|[^\]]+?)?\]\]")
 FRONTMATTER_RE = re.compile(r"^---\n(.+?)\n---", re.DOTALL)
 TITLE_RE = re.compile(r'^title:\s*["\']?(.+?)["\']?\s*$', re.MULTILINE)
 TYPE_RE  = re.compile(r'^type:\s*(\S+)',  re.MULTILINE)
+TAGS_RE  = re.compile(r'^tags:\s*\[([^\]]*)\]', re.MULTILINE)
 
-
-# ── Utility Functions ──────────────────────────────────────────────────────────
 
 def sha256(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()
@@ -87,18 +86,18 @@ def parse_frontmatter(content: str) -> dict:
     fm = m.group(1)
     title = TITLE_RE.search(fm)
     typ   = TYPE_RE.search(fm)
+    tags_m = TAGS_RE.search(fm)
+    tags = []
+    if tags_m:
+        tags = [t.strip().strip("'\"") for t in tags_m.group(1).split(",") if t.strip()]
     return {
         "title": title.group(1).strip() if title else None,
         "type":  typ.group(1).strip()   if typ   else "source",
+        "tags":  tags,
     }
 
 
 def collect_pages() -> list[Path]:
-    """Return all .md page paths from PAGE_DIRS (excluding index/log/overview/lint-report)
-
-    Deduplicates by stem: if the same filename stem exists in multiple directories,
-    only the first occurrence is kept.
-    """
     skip = {"index.md", "log.md", "overview.md", "lint-report.md"}
     seen_stems = set()
     pages = []
@@ -116,7 +115,6 @@ def extract_wikilinks(content: str) -> list[str]:
 
 
 def resolve_link(link_text: str, all_page_labels: dict[str, str]) -> str | None:
-    """Match [[LinkText]] to actual file ID, prefer exact label match, then try TitleCase path guess"""
     for pid, label in all_page_labels.items():
         if label.lower() == link_text.lower():
             return pid
@@ -127,16 +125,9 @@ def resolve_link(link_text: str, all_page_labels: dict[str, str]) -> str | None:
     return None
 
 
-# ── Pass 1: Extract Explicit Links ──────────────────────────────────────────────
-
 def build_extracted_edges(pages: list[Path]) -> tuple[dict, list[dict]]:
-    """
-    Returns:
-        nodes_map: {id: {id, label, type, content_hash}}
-        edges: [{source, target, type="EXTRACTED"}]
-    """
     nodes_map: dict[str, dict] = {}
-    raw_edges: list[tuple[str, str]] = []  # (source_id, link_text)
+    raw_edges: list[tuple[str, str]] = []
 
     for p in pages:
         content = p.read_text(encoding="utf-8")
@@ -146,6 +137,7 @@ def build_extracted_edges(pages: list[Path]) -> tuple[dict, list[dict]]:
             "id":           pid,
             "label":        fm.get("title") or p.stem,
             "type":         fm.get("type",  "source"),
+            "tags":         fm.get("tags", []),
             "content_hash": sha256(content),
         }
         for link in extract_wikilinks(content):
@@ -161,24 +153,72 @@ def build_extracted_edges(pages: list[Path]) -> tuple[dict, list[dict]]:
     return nodes_map, edges
 
 
-# ── Pass 2: AI Inference of Implicit Relations ────────────────────────────────
+def build_topic_edges(nodes_map: dict, extracted_edges: list[dict]) -> list[dict]:
+    existing_pairs = set()
+    for e in extracted_edges:
+        pair = tuple(sorted([e["source"], e["target"]]))
+        existing_pairs.add(pair)
+
+    topic_edges: list[dict] = []
+
+    dir_groups: dict[str, list[str]] = {}
+    for pid in nodes_map:
+        parts = pid.split("/")
+        if len(parts) >= 2:
+            dir_name = parts[0]
+            dir_groups.setdefault(dir_name, []).append(pid)
+
+    for dir_name, pids in dir_groups.items():
+        for i in range(len(pids)):
+            for j in range(i + 1, len(pids)):
+                pair = tuple(sorted([pids[i], pids[j]]))
+                if pair not in existing_pairs:
+                    topic_edges.append({
+                        "source": pids[i],
+                        "target": pids[j],
+                        "type": "TOPIC",
+                        "label": f"same {dir_name}",
+                    })
+                    existing_pairs.add(pair)
+
+    tag_groups: dict[str, list[str]] = {}
+    for pid, node in nodes_map.items():
+        for tag in node.get("tags", []):
+            tag_groups.setdefault(tag, []).append(pid)
+
+    for tag, pids in tag_groups.items():
+        if len(pids) < 2:
+            continue
+        for i in range(len(pids)):
+            for j in range(i + 1, len(pids)):
+                pair = tuple(sorted([pids[i], pids[j]]))
+                if pair not in existing_pairs:
+                    topic_edges.append({
+                        "source": pids[i],
+                        "target": pids[j],
+                        "type": "TOPIC",
+                        "label": f"shared tag: {tag}",
+                    })
+                    existing_pairs.add(pair)
+
+    return topic_edges
+
 
 INFER_PROMPT = """You are analyzing a wiki knowledge base. Given a list of wiki pages and their types,
-identify implicit semantic relationships that are NOT already captured by explicit wikilinks.
+identify implicit semantic relationships that are NOT already captured by explicit wikilinks or topic co-occurrence.
 
 For each relationship found, output JSON array entries:
 {{"source": "<page_id>", "target": "<page_id>", "label": "<short relationship>", "confidence": 0.0-1.0}}
 
-Only include confidence >= 0.5. Mark as INFERRED type (caller will add this).
-Output ONLY a valid JSON array, nothing else.
+Only include confidence >= 0.6. Output ONLY a valid JSON array, nothing else.
 
 Pages:
 {pages_json}
 """
 
 
-def infer_edges(nodes_map: dict, skip_infer: bool, cache: dict) -> list[dict]:
-    if skip_infer or not HAS_ANTHROPIC:
+def infer_edges(nodes_map: dict, do_infer: bool, cache: dict, existing_pairs: set) -> list[dict]:
+    if not do_infer or not HAS_ANTHROPIC:
         return []
 
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -186,7 +226,6 @@ def infer_edges(nodes_map: dict, skip_infer: bool, cache: dict) -> list[dict]:
         print("⚠  ANTHROPIC_API_KEY not set — skipping inference pass", file=sys.stderr)
         return []
 
-    # Only process pages with changed content
     changed_ids = [
         pid for pid, n in nodes_map.items()
         if cache.get(pid) != n["content_hash"]
@@ -197,19 +236,18 @@ def infer_edges(nodes_map: dict, skip_infer: bool, cache: dict) -> list[dict]:
 
     pages_json = json.dumps(
         [{"id": pid, "label": nodes_map[pid]["label"], "type": nodes_map[pid]["type"]}
-         for pid in list(nodes_map)[:80]],   # Limit tokens
+         for pid in list(nodes_map)[:80]],
         ensure_ascii=False,
         indent=2
     )
 
     client = anthropic.Anthropic(api_key=api_key)
     msg = client.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-sonnet-4-20250514",
         max_tokens=2048,
         messages=[{"role": "user", "content": INFER_PROMPT.format(pages_json=pages_json)}],
     )
     raw = msg.content[0].text.strip()
-    # Remove possible ```json wrapper
     raw = re.sub(r"^```json\n?", "", raw)
     raw = re.sub(r"\n?```$", "", raw)
 
@@ -229,12 +267,11 @@ def infer_edges(nodes_map: dict, skip_infer: bool, cache: dict) -> list[dict]:
         }
         for e in inferred
         if e.get("source") in nodes_map and e.get("target") in nodes_map
-        and e.get("confidence", 0) >= 0.5
+        and e.get("confidence", 0) >= 0.6
+        and tuple(sorted([e["source"], e["target"]])) not in existing_pairs
     ]
     return edges
 
-
-# ── Community Detection ────────────────────────────────────────────────────────
 
 def detect_communities(nodes_map: dict, edges: list[dict]) -> dict[str, int]:
     if not HAS_NX:
@@ -250,19 +287,18 @@ def detect_communities(nodes_map: dict, edges: list[dict]) -> dict[str, int]:
     return partition
 
 
-# ── Main Entry ────────────────────────────────────────────────────────────────
-
 def main():
     parser = argparse.ArgumentParser(description="Build wiki knowledge graph")
-    parser.add_argument("--skip-infer", action="store_true",
-                        help="Skip AI inference pass (faster)")
+    parser.add_argument("--infer", action="store_true",
+                        help="Enable AI inference pass (requires ANTHROPIC_API_KEY)")
+    parser.add_argument("--no-topic", action="store_true",
+                        help="Skip topic co-occurrence edges (legacy mode)")
     parser.add_argument("--open", action="store_true",
                         help="Open graph.html in browser after build")
     args = parser.parse_args()
 
     GRAPH_DIR.mkdir(exist_ok=True)
 
-    # Load cache
     cache: dict = {}
     if CACHE_FILE.exists():
         try:
@@ -270,7 +306,6 @@ def main():
         except Exception:
             pass
 
-    # Collect pages
     pages = collect_pages()
     if not pages:
         print("No wiki pages found. Run wiki-ingest first.", file=sys.stderr)
@@ -278,20 +313,25 @@ def main():
 
     print(f"Found {len(pages)} wiki pages")
 
-    # Pass 1
     nodes_map, extracted_edges = build_extracted_edges(pages)
-    print(f"Pass 1: {len(extracted_edges)} extracted edges")
+    print(f"Layer 1: {len(extracted_edges)} extracted edges")
 
-    # Pass 2
-    inferred_edges = infer_edges(nodes_map, args.skip_infer, cache)
-    print(f"Pass 2: {len(inferred_edges)} inferred edges")
+    topic_edges = []
+    if not args.no_topic:
+        topic_edges = build_topic_edges(nodes_map, extracted_edges)
+        print(f"Layer 2: {len(topic_edges)} topic edges")
 
-    all_edges = extracted_edges + inferred_edges
+    existing_pairs = set()
+    for e in extracted_edges + topic_edges:
+        existing_pairs.add(tuple(sorted([e["source"], e["target"]])))
 
-    # Community detection
+    inferred_edges = infer_edges(nodes_map, args.infer, cache, existing_pairs)
+    print(f"Layer 3: {len(inferred_edges)} inferred edges")
+
+    all_edges = extracted_edges + topic_edges + inferred_edges
+
     partition = detect_communities(nodes_map, all_edges)
 
-    # Calculate degree
     degree: dict[str, int] = {pid: 0 for pid in nodes_map}
     for e in all_edges:
         degree[e["source"]] = degree.get(e["source"], 0) + 1
@@ -314,33 +354,28 @@ def main():
         "edges":      all_edges,
     }
 
-    # Write graph.json
     GRAPH_JSON.write_text(json.dumps(graph_data, ensure_ascii=False, indent=2))
     print(f"Written {GRAPH_JSON}")
 
-    # Write graph.html
     template = TEMPLATE_FILE.read_text(encoding="utf-8")
     html = template.replace("/* GRAPH_JSON_PLACEHOLDER */", json.dumps(graph_data, ensure_ascii=False))
     GRAPH_HTML.write_text(html, encoding="utf-8")
     print(f"Written {GRAPH_HTML}")
 
-    # Update cache
     new_cache = {pid: n["content_hash"] for pid, n in nodes_map.items()}
     new_cache["inferred_edges"] = inferred_edges
     CACHE_FILE.write_text(json.dumps(new_cache, indent=2))
 
-    # Append log
     log_path = LOG_FILE
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_entry = f"\n## [{date.today()}] graph | Knowledge graph rebuilt — {len(nodes_out)} nodes, {len(all_edges)} edges\n"
     with open(log_path, "a", encoding="utf-8") as f:
         f.write(log_entry)
 
-    # Stats for hub pages
     top_hubs = sorted(nodes_out, key=lambda n: n["degree"], reverse=True)[:5]
     print("\n=== Graph Stats ===")
     print(f"Nodes: {len(nodes_out)}")
-    print(f"Edges: {len(all_edges)} (extracted={len(extracted_edges)}, inferred={len(inferred_edges)})")
+    print(f"Edges: {len(all_edges)} (extracted={len(extracted_edges)}, topic={len(topic_edges)}, inferred={len(inferred_edges)})")
     print("Top hub pages:")
     for n in top_hubs:
         print(f"  {n['label']} ({n['type']}) — degree {n['degree']}")

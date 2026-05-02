@@ -157,6 +157,10 @@
       <span class="legend-label" style="font-size:11px;color:#7a8fa8">Explicit Link</span>
     </div>
     <div class="legend-edge">
+      <div class="edge-line" style="background:repeating-linear-gradient(90deg,#5b9bd5 0,#5b9bd5 4px,transparent 4px,transparent 8px)"></div>
+      <span class="legend-label" style="font-size:11px;color:#7a8fa8">Topic Co-occurrence</span>
+    </div>
+    <div class="legend-edge">
       <div class="edge-line" style="background:repeating-linear-gradient(90deg,#f6a623 0,#f6a623 4px,transparent 4px,transparent 8px)"></div>
       <span class="legend-label" style="font-size:11px;color:#7a8fa8">Inferred Relation</span>
     </div>
@@ -243,21 +247,23 @@
 
     /* edges */
     const edgesDS = new vis.DataSet(DATA.edges.map((e, i) => {
-      const inferred = e.type === "INFERRED";
+      const isExtracted = e.type === "EXTRACTED";
+      const isInferred  = e.type === "INFERRED";
+      const isTopic     = e.type === "TOPIC";
       return {
         id:     i,
         from:   e.source,
         to:     e.target,
-        dashes: inferred ? [5, 4] : false,
+        dashes: isExtracted ? false : [5, 4],
         color: {
-          color:     inferred ? "#c07820" : "#2d4a6a",
-          highlight: inferred ? "#f6a623" : "#5599cc",
-          hover:     inferred ? "#f6a623" : "#5599cc",
-          opacity:   inferred ? 0.75 : 0.65,
+          color:     isExtracted ? "#2d4a6a" : (isTopic ? "#5b9bd5" : "#c07820"),
+          highlight: isExtracted ? "#5599cc" : (isTopic ? "#7ab8f5" : "#f6a623"),
+          hover:     isExtracted ? "#5599cc" : (isTopic ? "#7ab8f5" : "#f6a623"),
+          opacity:   isExtracted ? 0.65 : (isTopic ? 0.55 : 0.75),
         },
-        width:  inferred ? 1.2 : 1.5,
+        width:  isExtracted ? 1.5 : (isTopic ? 1.0 : 1.2),
         label:  e.label || "",
-        title:  e.confidence ? `confidence: ${e.confidence.toFixed(2)}` : undefined,
+        title:  e.confidence ? `confidence: ${e.confidence.toFixed(2)}` : (isTopic ? e.label : undefined),
         font:   { size: 9, color: "#4a6080", strokeWidth: 2, strokeColor: "#04070d" },
         arrows: { to: { enabled: true, scaleFactor: 0.55, type: "arrow" } },
         smooth: { type: "curvedCW", roundness: 0.15 },
