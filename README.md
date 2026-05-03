@@ -96,7 +96,16 @@ Layer 1 — raw/ 来源     不可变的原始文档（数据层）
 
 ### 知识图谱
 
-提取页面间的显式 wikilinks（`EXTRACTED`）和 AI 推断的语义关联（`INFERRED`，置信度 ≥ 0.5），生成零依赖的独立 `graph.html`，带节点类型着色和社区分组。
+提取页面间的显式 wikilinks（`EXTRACTED`）、同目录/同标签共现（`TOPIC`）和 AI 推断的语义关联（`INFERRED`），生成零依赖的独立 `graph.html`，带节点类型着色和社区分组。
+
+**三层边架构**：
+- **Layer 1**：`EXTRACTED` — 解析 `[[wikilinks]]`（无需 API）
+- **Layer 2**：`TOPIC` — 同目录共现 + 同标签共现（纯算法，无需 API）
+- **Layer 3**：`INFERRED` — AI 语义推理（默认开启，Agent 复用当前模型）
+
+**Agent API 复用**：脚本输出 `graph/need_infer.json` → Agent 调用 LLM → 写回 `graph/inferred.json` → 重新运行生成完整图谱。
+
+**缓存策略**：增量更新（默认）+ 30 天定期全量重建 + `--force` 强制重建。
 
 ---
 
@@ -147,6 +156,10 @@ wiki-graph
 | **日志轮转** | log.md 超 500 条自动轮转为 log-YYYY.md |
 | **页面拆分** | 页面超 200 行自动提示拆分为子主题 |
 | **会话定向** | 每次会话开始必须先读 SCHEMA + index + 最近 log，防止重复和矛盾 |
+| **统一图谱生成器** | 所有 agent 使用同一脚本，三层边架构（EXTRACTED + TOPIC + INFERRED） |
+| **Agent API 复用** | 脚本输出 JSON，Agent 调用 LLM 后写回，支持任意模型 |
+| **推理分级** | P0(同类主题) > P1(同系列) > P2(因果) > P3(相似) |
+| **缓存策略** | 增量更新 + 30 天定期全量重建 + `--force` 强制 |
 
 ---
 
@@ -254,10 +267,31 @@ wiki-lint
 如需使用 `wiki-graph` 命令构建交互式知识图谱：
 
 ```bash
-pip install networkx python-louvain anthropic
+# 基础功能（无需额外依赖）
+python build_graph.py
+
+# 社区检测（可选，用于社区分组）
+pip install networkx python-louvain
+
+# AI 推理（由 Agent 处理，脚本无需安装 anthropic）
 ```
 
-不安装也能用 Wiki 的摄入、查询、Lint 功能，只是无法自动生成 `graph.html`。
+**使用方式**：
+```bash
+# 默认：三层全开（推荐）
+python build_graph.py
+
+# 关闭 AI 推理（快速模式）
+python build_graph.py --no-infer
+
+# 仅显式链接（旧版兼容）
+python build_graph.py --no-infer --no-topic
+
+# 强制全量重建
+python build_graph.py --force
+```
+
+不安装 `networkx` 也能生成图谱，只是没有社区分组功能。
 
 ---
 

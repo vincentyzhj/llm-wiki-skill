@@ -103,7 +103,7 @@ Hermes 版本在原版 `llm-wiki-skill` 基础上，融合了 Hermes Agent 的 `
 | Index 页面 | 新增扩展规则（50 条分区拆分子分区、200 条总量创建 topic-map） |
 | Overview 页面 | **新增**：跨来源合成摘要模板 |
 
-#### 3. `skills/llm-wiki/scripts/build_graph.py` — 图谱构建脚本
+#### 3. `skills/llm-wiki/scripts/build_graph.py` — 图谱构建脚本（统一版本）
 
 | 改动项 | 原版 | Hermes 版 |
 |--------|------|-----------|
@@ -112,6 +112,13 @@ Hermes 版本在原版 `llm-wiki-skill` 基础上，融合了 Hermes Agent 的 `
 | 链接解析 | 搜索 `wiki/` 子目录 | 搜索根级目录 |
 | 日志路径 | `wiki/log.md` | `log.md`（根级） |
 | 节点颜色 | 4 种 | 6 种（+comparison 红色 `#E74C3C`、query 青色 `#1ABC9C`） |
+| **边架构** | 仅 EXTRACTED + INFERRED | **三层**：EXTRACTED + TOPIC + INFERRED |
+| **TOPIC 层** | 无 | 同目录共现 + 同标签共现（纯算法，无需 API） |
+| **INFERRED 层** | 直接调用 Anthropic API | **Agent 复用**：输出 `need_infer.json`，Agent 调用 LLM 后写回 `inferred.json` |
+| **推理分级** | 无 | P0(同类主题) > P1(同系列) > P2(因果) > P3(相似) |
+| **缓存策略** | 仅内容哈希 | 增量更新 + 30 天定期全量重建 + `--force` 强制 |
+| **默认行为** | 需 `--skip-infer` 关闭 | **默认开启 AI 推理**，`--no-infer` 关闭 |
+| **边数控制** | 无限制 | 每目录最多 5 条，每标签最多 3 条 |
 
 #### 4. `skills/llm-wiki/references/*.md` — 6 个参考文档（全部翻译为中文）
 
@@ -179,6 +186,90 @@ mkdir ~/my-wiki/raw/articles ~/my-wiki/raw/papers ~/my-wiki/raw/transcripts ~/my
 mkdir ~/my-wiki/graph
 
 # 编辑 SCHEMA.md 定义领域和标签分类法
+```
+
+---
+
+## 知识图谱生成器统一方案
+
+### 设计理念
+
+所有 agent（Hermes/qwenpaw/OpenCode）使用**同一脚本**，避免不同 agent 生成差异化的图谱。
+
+### 三层边架构
+
+| 层级 | 类型 | 生成方式 | 依赖 | 预期边数 |
+|------|------|----------|------|----------|
+| **Layer 1** | `EXTRACTED` | 解析 `[[wikilinks]]` | 无 | ~100+ |
+| **Layer 2** | `TOPIC` | 同目录共现 + 同标签共现 | 无（纯算法） | ~70-80 |
+| **Layer 3** | `INFERRED` | AI 语义推理 | Agent LLM | ~20-40 |
+
+### Agent API 复用流程
+
+```
+1. python build_graph.py
+   → 输出 graph/need_infer.json（包含需要推理的页面对）
+
+2. Agent 读取 need_infer.json
+   → 调用自己的 LLM 工具（复用当前模型）
+   → 写回 graph/inferred.json
+
+3. 重新运行 python build_graph.py
+   → 读取 inferred.json
+   → 生成完整图谱
+```
+
+**优势**：
+- 不同 agent 可用自己的模型（百炼/通义千问/Claude/GPT）
+- 中间文件便于调试和缓存
+- 脚本不依赖特定 API
+
+### 推理分级
+
+| 优先级 | 关系类型 | 置信度 | 说明 |
+|--------|----------|--------|------|
+| **P0** | 同类主题 | ≥ 0.9 | 同一领域/分类 |
+| **P1** | 同系列 | ≥ 0.8 | 系列文章/教程 |
+| **P2** | 因果关系 | ≥ 0.7 | A 导致 B |
+| **P3** | 相似内容 | ≥ 0.6 | 主题相近但不同 |
+
+### 缓存策略
+
+| 策略 | 说明 | 触发条件 |
+|------|------|----------|
+| **增量更新** | 只处理变更页面 | 默认行为 |
+| **定期全量** | 30 天自动全量重建 | 超过 30 天自动触发 |
+| **强制重建** | 忽略缓存全量重建 | `--force` 参数 |
+
+### 使用方式
+
+```bash
+# 默认：三层全开（推荐）
+python build_graph.py
+
+# 关闭 AI 推理（快速模式）
+python build_graph.py --no-infer
+
+# 仅显式链接（旧版兼容）
+python build_graph.py --no-infer --no-topic
+
+# 强制全量重建
+python build_graph.py --force
+
+# 构建后自动打开浏览器
+python build_graph.py --open
+```
+
+### 依赖
+
+```bash
+# 基础功能（无需额外依赖）
+python build_graph.py
+
+# 社区检测（可选）
+pip install networkx python-louvain
+
+# AI 推理（由 Agent 处理，脚本无需安装）
 ```
 
 ---
