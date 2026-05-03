@@ -5,15 +5,16 @@ build_graph.py — LLM Wiki Knowledge Graph Builder
 Three-layer edge architecture:
   Layer 1: Parse all [[wikilinks]] in wiki pages → EXTRACTED edges
   Layer 2: Same-directory co-occurrence + shared tags → TOPIC edges
-  Layer 3: Call Claude to infer implicit semantic relations → INFERRED edges
+  Layer 3: AI semantic inference → INFERRED edges (via agent LLM)
 
-Supports SHA256 caching, only processes changed pages.
+Supports SHA256 caching, incremental updates, and 30-day full rebuild.
 Output: graph/graph.json + graph/graph.html (vis.js self-contained)
 
 Usage:
   python build_graph.py              # EXTRACTED + TOPIC (default, no API needed)
-  python build_graph.py --infer      # + INFERRED (requires ANTHROPIC_API_KEY)
+  python build_graph.py --infer      # + INFERRED (requires agent LLM interaction)
   python build_graph.py --no-topic   # EXTRACTED only (legacy mode)
+  python build_graph.py --force      # Force full rebuild (ignore cache)
   python build_graph.py --open       # Open browser after build
 """
 
@@ -23,15 +24,10 @@ import json
 import os
 import re
 import sys
+import time
 import webbrowser
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
-
-try:
-    import anthropic
-    HAS_ANTHROPIC = True
-except ImportError:
-    HAS_ANTHROPIC = False
 
 try:
     import community as community_louvain
@@ -46,6 +42,8 @@ GRAPH_JSON = GRAPH_DIR / "graph.json"
 GRAPH_HTML = GRAPH_DIR / "graph.html"
 LOG_FILE   = Path("log.md")
 TEMPLATE_FILE = Path(__file__).parent.parent / "templates" / "wiki-graph-template.html"
+NEED_INFER_FILE = GRAPH_DIR / "need_infer.json"
+INFERRED_FILE = GRAPH_DIR / "inferred.json"
 
 PAGE_DIRS = [
     Path("sources"),
@@ -70,14 +68,13 @@ TITLE_RE = re.compile(r'^title:\s*["\']?(.+?)["\']?\s*$', re.MULTILINE)
 TYPE_RE  = re.compile(r'^type:\s*(\S+)',  re.MULTILINE)
 TAGS_RE  = re.compile(r'^tags:\s*\[([^\]]*)\]', re.MULTILINE)
 
+REBUILD_INTERVAL_DAYS = 30
 
 def sha256(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()
 
-
 def slug_to_id(path: Path) -> str:
     return path.as_posix()
-
 
 def parse_frontmatter(content: str) -> dict:
     m = FRONTMATTER_RE.match(content)
@@ -96,7 +93,6 @@ def parse_frontmatter(content: str) -> dict:
         "tags":  tags,
     }
 
-
 def collect_pages() -> list[Path]:
     skip = {"index.md", "log.md", "overview.md", "lint-report.md"}
     seen_stems = set()
@@ -109,10 +105,8 @@ def collect_pages() -> list[Path]:
                     pages.append(p)
     return pages
 
-
 def extract_wikilinks(content: str) -> list[str]:
     return WIKILINK_RE.findall(content)
-
 
 def resolve_link(link_text: str, all_page_labels: dict[str, str]) -> str | None:
     for pid, label in all_page_labels.items():
@@ -123,7 +117,6 @@ def resolve_link(link_text: str, all_page_labels: dict[str, str]) -> str | None:
         if guess.exists():
             return slug_to_id(guess)
     return None
-
 
 def build_extracted_edges(pages: list[Path]) -> tuple[dict, list[dict]]:
     nodes_map: dict[str, dict] = {}
@@ -152,7 +145,6 @@ def build_extracted_edges(pages: list[Path]) -> tuple[dict, list[dict]]:
 
     return nodes_map, edges
 
-
 def build_topic_edges(nodes_map: dict, extracted_edges: list[dict]) -> list[dict]:
     existing_pairs = set()
     for e in extracted_edges:
@@ -171,7 +163,7 @@ def build_topic_edges(nodes_map: dict, extracted_edges: list[dict]) -> list[dict
     for dir_name, pids in dir_groups.items():
         if len(pids) <= 1:
             continue
-        max_edges = min(10, len(pids) * 2)
+        max_edges = min(5, len(pids) // 2 + 1)
         count = 0
         for i in range(len(pids)):
             if count >= max_edges:
@@ -199,7 +191,7 @@ def build_topic_edges(nodes_map: dict, extracted_edges: list[dict]) -> list[dict
         if len(pids) < 2 or len(pids) > 10:
             continue
         for i in range(len(pids)):
-            for j in range(i + 1, min(i + 4, len(pids))):
+            for j in range(i + 1, min(i + 3, len(pids))):
                 pair = tuple(sorted([pids[i], pids[j]]))
                 if pair not in existing_pairs:
                     topic_edges.append({
@@ -212,12 +204,17 @@ def build_topic_edges(nodes_map: dict, extracted_edges: list[dict]) -> list[dict
 
     return topic_edges
 
-
 INFER_PROMPT = """You are analyzing a wiki knowledge base. Given a list of wiki pages and their types,
 identify implicit semantic relationships that are NOT already captured by explicit wikilinks or topic co-occurrence.
 
+Grade relationships by priority:
+- P0 (confidence 0.9): Same topic/category (e.g., both about AI music)
+- P1 (confidence 0.8): Same series (e.g., tutorial part 1 and part 2)
+- P2 (confidence 0.7): Causal relationship (e.g., A leads to B)
+- P3 (confidence 0.6): Similar content (e.g., related but different topics)
+
 For each relationship found, output JSON array entries:
-{{"source": "<page_id>", "target": "<page_id>", "label": "<short relationship>", "confidence": 0.0-1.0}}
+{{"source": "<page_id>", "target": "<page_id>", "label": "<short relationship>", "confidence": 0.6-0.9, "priority": "P0|P1|P2|P3"}}
 
 Only include confidence >= 0.6. Output ONLY a valid JSON array, nothing else.
 
@@ -225,62 +222,53 @@ Pages:
 {pages_json}
 """
 
+def infer_edges_via_agent(nodes_map: dict, cache: dict, existing_pairs: set, force: bool) -> list[dict]:
+    need_infer = []
+    for pid, node in nodes_map.items():
+        if force or cache.get(pid) != node["content_hash"]:
+            need_infer.append({"id": pid, "label": node["label"], "type": node["type"]})
 
-def infer_edges(nodes_map: dict, do_infer: bool, cache: dict, existing_pairs: set) -> list[dict]:
-    if not do_infer or not HAS_ANTHROPIC:
-        return []
-
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        print("⚠  ANTHROPIC_API_KEY not set — skipping inference pass", file=sys.stderr)
-        return []
-
-    changed_ids = [
-        pid for pid, n in nodes_map.items()
-        if cache.get(pid) != n["content_hash"]
-    ]
-    if not changed_ids:
+    if not need_infer:
         print("✓ No changed pages — reusing cached inferred edges")
-        return cache.get("inferred_edges", [])
-
-    pages_json = json.dumps(
-        [{"id": pid, "label": nodes_map[pid]["label"], "type": nodes_map[pid]["type"]}
-         for pid in list(nodes_map)[:80]],
-        ensure_ascii=False,
-        indent=2
-    )
-
-    client = anthropic.Anthropic(api_key=api_key)
-    msg = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=2048,
-        messages=[{"role": "user", "content": INFER_PROMPT.format(pages_json=pages_json)}],
-    )
-    raw = msg.content[0].text.strip()
-    raw = re.sub(r"^```json\n?", "", raw)
-    raw = re.sub(r"\n?```$", "", raw)
-
-    try:
-        inferred = json.loads(raw)
-    except json.JSONDecodeError:
-        print("⚠  Could not parse inferred edges JSON", file=sys.stderr)
+        if INFERRED_FILE.exists():
+            return json.loads(INFERRED_FILE.read_text())
         return []
 
-    edges = [
-        {
-            "source":     e["source"],
-            "target":     e["target"],
-            "type":       "INFERRED",
-            "label":      e.get("label", ""),
-            "confidence": e.get("confidence", 0.7),
-        }
-        for e in inferred
-        if e.get("source") in nodes_map and e.get("target") in nodes_map
-        and e.get("confidence", 0) >= 0.6
-        and tuple(sorted([e["source"], e["target"]])) not in existing_pairs
-    ]
-    return edges
+    print(f"⚠  Need agent inference for {len(need_infer)} pages")
+    print(f"   Writing {NEED_INFER_FILE} — agent should call LLM and write {INFERRED_FILE}")
 
+    pages_json = json.dumps(need_infer[:80], ensure_ascii=False, indent=2)
+    need_infer_data = {
+        "prompt": INFER_PROMPT.format(pages_json=pages_json),
+        "pages": need_infer,
+        "timestamp": datetime.now().isoformat(),
+    }
+    NEED_INFER_FILE.write_text(json.dumps(need_infer_data, ensure_ascii=False, indent=2))
+
+    if INFERRED_FILE.exists():
+        try:
+            inferred = json.loads(INFERRED_FILE.read_text())
+            edges = [
+                {
+                    "source":     e["source"],
+                    "target":     e["target"],
+                    "type":       "INFERRED",
+                    "label":      e.get("label", ""),
+                    "confidence": e.get("confidence", 0.7),
+                    "priority":   e.get("priority", "P3"),
+                }
+                for e in inferred
+                if e.get("source") in nodes_map and e.get("target") in nodes_map
+                and e.get("confidence", 0) >= 0.6
+                and tuple(sorted([e["source"], e["target"]])) not in existing_pairs
+            ]
+            print(f"✓ Loaded {len(edges)} inferred edges from {INFERRED_FILE}")
+            return edges
+        except Exception:
+            pass
+
+    print("⚠  No inferred edges found — run agent to generate them")
+    return []
 
 def detect_communities(nodes_map: dict, edges: list[dict]) -> dict[str, int]:
     if not HAS_NX:
@@ -295,13 +283,14 @@ def detect_communities(nodes_map: dict, edges: list[dict]) -> dict[str, int]:
     partition = community_louvain.best_partition(G)
     return partition
 
-
 def main():
     parser = argparse.ArgumentParser(description="Build wiki knowledge graph")
     parser.add_argument("--infer", action="store_true",
-                        help="Enable AI inference pass (requires ANTHROPIC_API_KEY)")
+                        help="Enable AI inference pass (requires agent LLM interaction)")
     parser.add_argument("--no-topic", action="store_true",
                         help="Skip topic co-occurrence edges (legacy mode)")
+    parser.add_argument("--force", action="store_true",
+                        help="Force full rebuild (ignore cache)")
     parser.add_argument("--open", action="store_true",
                         help="Open graph.html in browser after build")
     args = parser.parse_args()
@@ -309,11 +298,17 @@ def main():
     GRAPH_DIR.mkdir(exist_ok=True)
 
     cache: dict = {}
-    if CACHE_FILE.exists():
+    if CACHE_FILE.exists() and not args.force:
         try:
             cache = json.loads(CACHE_FILE.read_text())
         except Exception:
             pass
+
+    last_build = cache.get("last_build_time", 0)
+    now = time.time()
+    if now - last_build > REBUILD_INTERVAL_DAYS * 86400:
+        print(f"⚠  Last build was {REBUILD_INTERVAL_DAYS}+ days ago — forcing full rebuild")
+        args.force = True
 
     pages = collect_pages()
     if not pages:
@@ -334,8 +329,10 @@ def main():
     for e in extracted_edges + topic_edges:
         existing_pairs.add(tuple(sorted([e["source"], e["target"]])))
 
-    inferred_edges = infer_edges(nodes_map, args.infer, cache, existing_pairs)
-    print(f"Layer 3: {len(inferred_edges)} inferred edges")
+    inferred_edges = []
+    if args.infer:
+        inferred_edges = infer_edges_via_agent(nodes_map, cache, existing_pairs, args.force)
+        print(f"Layer 3: {len(inferred_edges)} inferred edges")
 
     all_edges = extracted_edges + topic_edges + inferred_edges
 
@@ -373,6 +370,7 @@ def main():
 
     new_cache = {pid: n["content_hash"] for pid, n in nodes_map.items()}
     new_cache["inferred_edges"] = inferred_edges
+    new_cache["last_build_time"] = now
     CACHE_FILE.write_text(json.dumps(new_cache, indent=2))
 
     log_path = LOG_FILE
@@ -389,9 +387,15 @@ def main():
     for n in top_hubs:
         print(f"  {n['label']} ({n['type']}) — degree {n['degree']}")
 
+    if args.infer and NEED_INFER_FILE.exists():
+        print(f"\n⚠  Agent action required:")
+        print(f"   1. Read {NEED_INFER_FILE}")
+        print(f"   2. Call LLM with the prompt")
+        print(f"   3. Write results to {INFERRED_FILE}")
+        print(f"   4. Re-run: python build_graph.py --infer")
+
     if args.open:
         webbrowser.open(GRAPH_HTML.resolve().as_uri())
-
 
 if __name__ == "__main__":
     main()
