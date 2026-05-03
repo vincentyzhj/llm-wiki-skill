@@ -116,7 +116,7 @@
       border: 1px solid rgba(99,130,175,0.3) !important;
       border-radius: 8px !important;
       color: #e2eaf5 !important;
-      font-family: 'Inter', sans-serif !important;
+      font-family: 'Noto Sans SC', 'Inter', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
       font-size: 12px !important;
       padding: 8px 12px !important;
       box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
@@ -264,7 +264,7 @@
         width:  isExtracted ? 1.5 : (isTopic ? 1.0 : 1.2),
         label:  e.label || "",
         title:  e.confidence ? `confidence: ${e.confidence.toFixed(2)}` : (isTopic ? e.label : undefined),
-        font:   { size: 9, color: "#4a6080", strokeWidth: 2, strokeColor: "#04070d" },
+        font:   { size: 9, color: "#4a6080", strokeWidth: 2, strokeColor: "#04070d", face: "'Noto Sans SC', Inter, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif" },
         arrows: { to: { enabled: true, scaleFactor: 0.55, type: "arrow" } },
         smooth: { type: "curvedCW", roundness: 0.15 },
       };
