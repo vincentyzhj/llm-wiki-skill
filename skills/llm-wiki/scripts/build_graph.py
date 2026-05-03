@@ -285,8 +285,8 @@ def detect_communities(nodes_map: dict, edges: list[dict]) -> dict[str, int]:
 
 def main():
     parser = argparse.ArgumentParser(description="Build wiki knowledge graph")
-    parser.add_argument("--infer", action="store_true",
-                        help="Enable AI inference pass (requires agent LLM interaction)")
+    parser.add_argument("--no-infer", action="store_true",
+                        help="Disable AI inference pass (faster, no agent needed)")
     parser.add_argument("--no-topic", action="store_true",
                         help="Skip topic co-occurrence edges (legacy mode)")
     parser.add_argument("--force", action="store_true",
@@ -330,7 +330,7 @@ def main():
         existing_pairs.add(tuple(sorted([e["source"], e["target"]])))
 
     inferred_edges = []
-    if args.infer:
+    if not args.no_infer:
         inferred_edges = infer_edges_via_agent(nodes_map, cache, existing_pairs, args.force)
         print(f"Layer 3: {len(inferred_edges)} inferred edges")
 
@@ -387,12 +387,12 @@ def main():
     for n in top_hubs:
         print(f"  {n['label']} ({n['type']}) — degree {n['degree']}")
 
-    if args.infer and NEED_INFER_FILE.exists():
+    if not args.no_infer and NEED_INFER_FILE.exists():
         print(f"\n⚠  Agent action required:")
         print(f"   1. Read {NEED_INFER_FILE}")
         print(f"   2. Call LLM with the prompt")
         print(f"   3. Write results to {INFERRED_FILE}")
-        print(f"   4. Re-run: python build_graph.py --infer")
+        print(f"   4. Re-run: python build_graph.py")
 
     if args.open:
         webbrowser.open(GRAPH_HTML.resolve().as_uri())
